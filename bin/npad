@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Local-dev wrapper for the npad CLI. Symlink into your PATH:
+#   sudo ln -sf /Users/devesh/Documents/Agentpad/bin/npad /usr/local/bin/npad
+#
+# When @npad/cli is published to npm, this wrapper is replaced by:
+#   npm i -g @npad/cli
+exec /Users/devesh/Documents/Agentpad/node_modules/.bin/tsx \
+     /Users/devesh/Documents/Agentpad/packages/cli/src/index.ts "$@"

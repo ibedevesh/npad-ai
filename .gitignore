@@ -1,0 +1,33 @@
+node_modules
+dist
+build
+*.log
+*.tsbuildinfo
+
+# environment / local config
+.env
+.env.local
+.env.*.local
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# local databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Vercel
+.vercel
+
+# Firebase / secrets — never commit
+*-firebase-adminsdk-*.json
+firebase-service-account.json
+secrets/
+
