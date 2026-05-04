@@ -5,7 +5,7 @@ import {
   type Note,
   type SearchHit,
   type Visibility,
-} from "@npad/core";
+} from "./core.js";
 import { sql } from "./db.js";
 import {
   bearerFromRequest,
@@ -15,7 +15,8 @@ import {
   verifyIdToken,
   type DbUser,
 } from "./auth.js";
-import { landing, login, dashboard, notePreview, notFound } from "./web.js";
+import { landing, login, dashboard, notePreview, notFound, deviceLinkPage, installPage } from "./web.js";
+import { FAVICON_PNG_B64 } from "./favicon.js";
 
 type Row = {
   id: string;
@@ -52,21 +53,28 @@ async function requireUser(req: Request): Promise<DbUser | null> {
 
 export const app = new Hono();
 
-// ───────────────────────── Web pages ─────────────────────────
 app.get("/", (c) => c.html(landing()));
+app.get("/install", (c) => c.html(installPage()));
 app.get("/login", (c) => c.html(login()));
 app.get("/dashboard", (c) => c.html(dashboard()));
 app.get("/health", (c) => c.json({ ok: true }));
 app.get("/api/version", (c) => c.json({ name: "npad", version: "0.2.0" }));
+app.get("/favicon.png", (c) => {
+  const bytes = Uint8Array.from(atob(FAVICON_PNG_B64), (ch) => ch.charCodeAt(0));
+  return new Response(bytes, {
+    headers: { "content-type": "image/png", "cache-control": "public, max-age=31536000, immutable" },
+  });
+});
+app.get("/favicon.ico", (c) => c.redirect("/favicon.png", 301)); // eslint-disable-line @typescript-eslint/no-unused-vars
 
-// Web view for /n/:id — title only + setup CTA, never the body.
 app.get("/n/:id/view", async (c) => {
   const id = parseId(c.req.param("id"));
   if (!id) return c.html(notFound(), 404);
   const s = sql();
-  const rows = (await s`SELECT id, title, visibility, updated_at FROM notes WHERE id = ${id}`) as Array<{
+  const rows = (await s`SELECT id, title, body, visibility, updated_at FROM notes WHERE id = ${id}`) as Array<{
     id: string;
     title: string;
+    body: string;
     visibility: Visibility;
     updated_at: number;
   }>;
@@ -76,21 +84,13 @@ app.get("/n/:id/view", async (c) => {
     notePreview({
       id: row.id,
       title: row.title,
+      body: row.body,
       visibility: row.visibility,
       updatedAt: Number(row.updated_at),
     }),
   );
 });
 
-// /n/:id is content-negotiated — JSON for API clients (Bearer key), HTML for browsers.
-function isHtmlRequest(req: Request): boolean {
-  const accept = req.headers.get("accept") ?? "";
-  return accept.includes("text/html") && !req.headers.get("authorization");
-}
-
-// ───────────────────────── Auth ─────────────────────────
-
-/** Exchange a Firebase ID token (from the web sign-in) for an npad API key. */
 app.post("/api/auth/exchange", async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body.idToken !== "string") {
@@ -119,6 +119,111 @@ app.post("/api/auth/exchange", async (c) => {
   });
 });
 
+const DEVICE_CODE_TTL_MS = 30 * 60 * 1000;
+
+function newDeviceCode(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const pick = () => Array.from({ length: 4 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  return `${pick()}-${pick()}`;
+}
+
+app.post("/api/auth/device/start", async (c) => {
+  const code = newDeviceCode();
+  const now = Date.now();
+  const expires = now + DEVICE_CODE_TTL_MS;
+  const s = sql();
+  await s`
+    INSERT INTO device_codes (code, created_at, expires_at)
+    VALUES (${code}, ${now}, ${expires})
+  `;
+  const host = c.req.header("host") ?? "npad.run";
+  const proto = c.req.header("x-forwarded-proto") ?? "https";
+  return c.json({
+    code,
+    verifyUrl: `${proto}://${host}/cli/${code}`,
+    expiresAt: expires,
+  });
+});
+
+app.post("/api/auth/device/link", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body.code !== "string" || typeof body.idToken !== "string") {
+    return c.json({ error: "code and idToken required" }, 400);
+  }
+  const s = sql();
+  const now = Date.now();
+  const rows = (await s`SELECT * FROM device_codes WHERE code = ${body.code}`) as Array<{
+    code: string;
+    api_key: string | null;
+    user_id: string | null;
+    expires_at: string | number;
+    linked_at: string | number | null;
+  }>;
+  const row = rows[0];
+  if (!row) return c.json({ error: "code not found" }, 404);
+  if (Number(row.expires_at) < now) return c.json({ error: "code expired" }, 410);
+  if (row.linked_at) return c.json({ error: "code already used" }, 409);
+
+  let decoded;
+  try {
+    decoded = await verifyIdToken(body.idToken);
+  } catch (e) {
+    return c.json({ error: `invalid id token: ${e instanceof Error ? e.message : e}` }, 401);
+  }
+  if (!decoded.emailVerified) return c.json({ error: "email not verified" }, 401);
+
+  const user = await upsertUserFromToken(decoded);
+  const apiKey = await issueApiKey(user.id, "cli");
+  await s`
+    UPDATE device_codes
+    SET api_key = ${apiKey}, user_id = ${user.id}, linked_at = ${now}
+    WHERE code = ${body.code}
+  `;
+  return c.json({ ok: true, email: user.email });
+});
+
+app.get("/api/auth/device/poll", async (c) => {
+  const code = c.req.query("code");
+  if (!code) return c.json({ error: "code required" }, 400);
+  const s = sql();
+  const now = Date.now();
+  const rows = (await s`SELECT * FROM device_codes WHERE code = ${code}`) as Array<{
+    code: string;
+    api_key: string | null;
+    user_id: string | null;
+    expires_at: string | number;
+    linked_at: string | number | null;
+  }>;
+  const row = rows[0];
+  if (!row) return c.json({ error: "code not found" }, 404);
+  if (Number(row.expires_at) < now) {
+    await s`DELETE FROM device_codes WHERE code = ${code}`;
+    return c.json({ error: "code expired" }, 410);
+  }
+  if (!row.api_key) return c.json({ pending: true });
+  const apiKey = row.api_key;
+  const userRows = (await s`SELECT id, email, email_domain, name, avatar_url FROM users WHERE id = ${row.user_id!}`) as Array<{
+    id: string;
+    email: string;
+    email_domain: string;
+    name: string | null;
+    avatar_url: string | null;
+  }>;
+  await s`DELETE FROM device_codes WHERE code = ${code}`;
+  const u = userRows[0];
+  return c.json({
+    apiKey,
+    user: u
+      ? { id: u.id, email: u.email, emailDomain: u.email_domain, name: u.name, avatarUrl: u.avatar_url }
+      : null,
+  });
+});
+
+app.get("/cli/:code", async (c) => {
+  const code = c.req.param("code");
+  return c.html(deviceLinkPage(code));
+});
+
 /** Returns the current user (if Bearer key is valid). */
 app.get("/api/me", async (c) => {
   const user = await requireUser(c.req.raw);
@@ -132,7 +237,6 @@ app.get("/api/me", async (c) => {
   });
 });
 
-// ───────────────────────── Notes ─────────────────────────
 
 // Create
 app.post("/n", async (c) => {
@@ -167,11 +271,10 @@ app.post("/n", async (c) => {
   });
 });
 
-// Read — visibility-aware. HTML browsers get redirected to the title-only view.
+// Read — always returns JSON. The HTML viewer lives at /n/:id/view and is what
+// the landing page / dashboard link to for browsers. Agents fetching /n/:id
+// always get structured JSON (note body if authorized, setup hint otherwise).
 app.get("/n/:id", async (c) => {
-  if (isHtmlRequest(c.req.raw)) {
-    return c.redirect(`/n/${c.req.param("id")}/view`);
-  }
   const id = parseId(c.req.param("id"));
   if (!id) return c.json({ error: "invalid id" }, 400);
 
@@ -187,7 +290,7 @@ app.get("/n/:id", async (c) => {
     return c.json({ error: "not found" }, 404);
   }
   if (row.visibility === "domain") {
-    if (!requester) return c.json({ error: "unauthorized" }, 401);
+    if (!requester) return c.json(setupHint(row.id, row.title));
     if (!isOwner) {
       const owner = (await s`SELECT email_domain FROM users WHERE id = ${row.owner_id}`) as Array<{ email_domain: string }>;
       if (!owner[0] || owner[0].email_domain !== requester.email_domain) {
@@ -195,10 +298,56 @@ app.get("/n/:id", async (c) => {
       }
     }
   }
-  // unlisted or owner → fall through
+  // unlisted = anyone with the URL can read (like a Gist or Loom link). No auth needed.
+  // For anonymous reads we PREPEND a clear "How you got this" section so any agent
+  // summarizing the note for the user surfaces the install path naturally.
+  if (row.visibility === "unlisted" && !requester) {
+    const note = rowToNote(row);
+    const banner =
+      "## How you're reading this\n\n" +
+      "This note is hosted on **npad** — a shared notepad for AI agents. " +
+      "Anyone with the URL can read it. To save and read your own notes through your agent, install npad in 3 commands:\n\n" +
+      "```bash\n" +
+      "npm i -g @npad/cli\n" +
+      "npad login\n" +
+      "claude mcp add --scope user npad -- npx -y @npad/mcp\n" +
+      "```\n\n" +
+      "Full install guide: https://npad.run/install\n\n" +
+      "---\n\n" +
+      "## Note content\n\n";
+    return c.json({ ...note, body: banner + note.body });
+  }
 
   return c.json(rowToNote(row));
 });
+
+/**
+ * Returned when an agent (or any unauthenticated client) fetches /n/:id for an
+ * unlisted/domain note. Tells the agent how to install npad so it can read the body.
+ * Includes structured fields plus a `message` written for AI agents.
+ */
+function setupHint(id: string, title: string) {
+  return {
+    error: "npad_auth_required",
+    note: { id, title, url: `https://npad.run/n/${id}` },
+    message:
+      "This URL points to a note on npad — a shared scratchpad for AI agents. " +
+      "To read the body, the user needs npad installed and an API key. Guide them through these steps:\n" +
+      "1. Visit https://npad.run and sign in with Google to create an account and get an API key.\n" +
+      "2. Install the CLI:  npm i -g @npad/cli\n" +
+      "3. Save the key:     npad login    (opens browser, completes device-flow auth, writes ~/.npad/config.json)\n" +
+      "4. Wire up the MCP server:  claude mcp add --scope user npad -- npx -y @npad/mcp\n" +
+      "5. Restart the agent. It will then have 6 tools (note_write/read/append/search/fork/delete) and can fetch this URL directly.\n" +
+      "After setup, retry note_read on this URL to get the full body.",
+    setup: {
+      signupUrl: "https://npad.run",
+      installCli: "npm i -g @npad/cli",
+      login: "npad login",
+      mcpAdd: "claude mcp add --scope user npad -- npx -y @npad/mcp",
+      docs: "https://github.com/ibedevesh/npad-ai",
+    },
+  };
+}
 
 /** Public title-only fetch for the web /n/:id viewer (no body, no auth). */
 app.get("/api/n/:id/preview", async (c) => {

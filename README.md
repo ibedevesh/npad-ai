@@ -1,6 +1,18 @@
+<div align="center">
+
+<img src="assets/logo.png" alt="npad" width="120" />
+
 # npad
 
-> **notepad for agents** — a scratchpad your AI agents read and write to, so knowledge survives across terminals, sessions, and tools.
+**notepad for agents** — a scratchpad your AI agents read and write to, so knowledge survives across terminals, sessions, and tools.
+
+[![npm](https://img.shields.io/npm/v/@npad/cli?color=F5A524&label=%40npad%2Fcli&labelColor=07070A)](https://www.npmjs.com/package/@npad/cli)
+[![license](https://img.shields.io/badge/license-MIT-F5A524?labelColor=07070A)](LICENSE)
+[![site](https://img.shields.io/badge/site-npad.run-F5A524?labelColor=07070A)](https://npad.run)
+
+</div>
+
+---
 
 ```
 Terminal 1 (Claude Code):
@@ -12,19 +24,19 @@ Terminal 2 (Codex, two days later):
   codex:  → note_search "dumbledore" → finds k7f2a → reads it → continues
 ```
 
-Every agent — Claude Code, Codex, Cursor, anything that speaks MCP — reads from
-and writes to the same notepad. **Save once, recall forever.**
+Every agent — Claude Code, Codex, Cursor, anything that speaks MCP — reads from and writes to the same notepad. **Save once, recall forever.**
 
-## Why npad
+## Why
 
 - `CLAUDE.md` is local to one tool, project-scoped, and rots.
 - Notion is for humans, not agents.
-- npad is the missing layer: a single place every agent can write to and read from, with stable URLs you can hand to a teammate.
+- npad is the missing layer: one place every agent writes to and reads from, with stable URLs you can hand to a teammate.
 
 ## Install
 
 ```bash
-npm i -g @npad/cli                                       # gets you the `npad` CLI
+npm i -g @npad/cli                                       # CLI
+npad login                                               # one-time sign-in
 claude mcp add --scope user npad -- npx -y @npad/mcp     # wires up Claude Code
 ```
 
@@ -57,12 +69,12 @@ npad doctor    # diagnose your setup
 npad login     # sign in (enables sync + sharing)
 ```
 
-## How sharing works
+## Sharing
 
-Mark a note `unlisted` and you get a stable URL like `npad.ai/n/k7f2a`. Paste it anywhere — Slack, email, README. Anyone you send it to can:
+Mark a note `unlisted` and you get a stable URL like `npad.run/n/k7f2a`. Paste it anywhere — Slack, email, README. Anyone you send it to can:
 
 1. **Open it in their agent** — their npad-equipped Claude/Codex calls `note_read` and gets the body.
-2. **Open it in a browser** — they see a title-only page with a setup CTA. Bodies never render in browsers; npad is for agents, not crawlers.
+2. **Open it in a browser** — they see the rendered note in a read-only "note.md" panel, so humans can verify before passing it to an agent.
 
 Three visibility levels:
 
@@ -94,16 +106,17 @@ Monorepo:
 | [`packages/core`](packages/core) | types, Store interface, id helpers |
 | [`packages/mcp`](packages/mcp) | the `npx @npad/mcp` server with sqlite + http stores |
 | [`packages/cli`](packages/cli) | the `npad` command for humans |
-| [`packages/server`](packages/server) | Hono API for hosted mode (`api/index.ts` is the Vercel entrypoint) |
+| [`api/`](api) | Hono API for hosted mode (Vercel entrypoint) |
 
-## Self-hosting
+## Star history
 
-See [DEPLOY.md](DEPLOY.md). TL;DR: fork → Vercel project → Neon free-tier DB → Firebase Admin env var → `vercel deploy`. ~15 minutes, $0 to run at small scale.
-
-## Contributing
-
-PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) — fork + branch + PR; main is protected.
+<a href="https://star-history.com/#ibedevesh/npad-ai&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ibedevesh/npad-ai&type=Date&theme=dark" />
+    <img alt="Star history" src="https://api.star-history.com/svg?repos=ibedevesh/npad-ai&type=Date" />
+  </picture>
+</a>
 
 ## License
 
-MIT. Use it, fork it, sell it. Just don't pretend you wrote it.
+MIT. Use it, fork it, sell it.

@@ -6,13 +6,19 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "pnpm -r build",
     "dev:server": "pnpm --filter @npad/server dev",
     "dev:mcp": "pnpm --filter @npad/mcp dev",
     "typecheck": "pnpm -r typecheck"
   },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "firebase-admin": "^13.0.2",
+    "hono": "^4.6.14",
+    "nanoid": "^5.0.9"
+  },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },

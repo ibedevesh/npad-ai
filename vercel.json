@@ -1,8 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm --filter @npad/server install --offline 2>/dev/null || pnpm install",
-  "installCommand": "pnpm install",
+  "buildCommand": null,
+  "outputDirectory": null,
+  "framework": null,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
+    {
+      "source": "/__/auth/:path*",
+      "destination": "https://npad-ffae2.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
   ]
 }
