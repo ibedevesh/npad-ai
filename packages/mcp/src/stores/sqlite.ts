@@ -104,7 +104,33 @@ export class SqliteStore implements Store {
     const id = parseId(idOrUrl);
     if (!id) return null;
     const row = this.db.prepare(`SELECT * FROM notes WHERE id = ?`).get(id) as Row | undefined;
-    return row ? rowToNote(row) : null;
+    if (row) return rowToNote(row);
+
+    // Local lookup failed. If the input was a full URL pointing at a hosted npad
+    // instance, fetch it anonymously — gets either the note (if unlisted+public)
+    // or a setup hint that we throw upward as a descriptive error so the agent
+    // can guide the user to install npad properly.
+    const urlMatch = idOrUrl.trim().match(/^(https?:\/\/[^/]+)\/n\/[a-z0-9]+/i);
+    if (urlMatch && urlMatch[1]) {
+      const baseUrl = urlMatch[1];
+      try {
+        const res = await fetch(`${baseUrl}/n/${id}`);
+        const data = (await res.json().catch(() => null)) as
+          | (Note & { error?: never })
+          | { error: string; message?: string; setup?: unknown }
+          | null;
+        if (data && "error" in data && data.error === "npad_auth_required") {
+          throw new Error(`NPAD_AUTH_REQUIRED: ${data.message ?? "install npad to read this URL"}`);
+        }
+        if (res.ok && data && typeof (data as Note).id === "string" && typeof (data as Note).body === "string") {
+          return data as Note;
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message.startsWith("NPAD_AUTH_REQUIRED:")) throw e;
+        // Network error, etc. — fall through to null (note not found).
+      }
+    }
+    return null;
   }
 
   async append(input: AppendInput): Promise<Note | null> {

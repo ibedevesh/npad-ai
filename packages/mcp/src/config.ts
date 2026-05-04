@@ -21,7 +21,7 @@ export interface NpadConfig {
   };
 }
 
-export const DEFAULT_API_URL = "https://npad.ai";
+export const DEFAULT_API_URL = "https://npad.run";
 
 export function configPath(): string {
   return process.env.NPAD_CONFIG_PATH ?? join(homedir(), ".npad", "config.json");

@@ -2,7 +2,7 @@ import { initializeApp, cert, getApps, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { newUserId, newApiKey } from "@npad/core";
+import { newUserId, newApiKey } from "./core.js";
 import { sql } from "./db.js";
 
 let _app: App | null = null;

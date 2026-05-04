@@ -1,21 +1,14 @@
-// Vercel Functions entry — proxies all routes to the Hono app.
-import { handle } from "hono/vercel";
-import { app } from "../packages/server/src/app.js";
-import { migrate } from "../packages/server/src/db.js";
-
-// Run migrations once per cold start. Cheap, idempotent.
-let migrated = false;
-app.use(async (c, next) => {
-  if (!migrated && process.env.DATABASE_URL) {
-    try {
-      await migrate();
-      migrated = true;
-    } catch (e) {
-      console.error("[npad] migration failed:", e);
-    }
-  }
-  await next();
-});
+// Vercel Functions entry — named exports for each HTTP method.
+import { app } from "./_lib/app.js";
 
 export const config = { runtime: "nodejs" };
-export default handle(app);
+
+const fetch = (req: Request): Response | Promise<Response> => app.fetch(req);
+
+export const GET = fetch;
+export const POST = fetch;
+export const PUT = fetch;
+export const PATCH = fetch;
+export const DELETE = fetch;
+export const HEAD = fetch;
+export const OPTIONS = fetch;

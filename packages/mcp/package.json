@@ -1,20 +1,45 @@
 {
   "name": "@npad/mcp",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.2.0",
+  "description": "MCP server for npad — exposes note_write/read/search tools to any MCP-compatible AI agent.",
+  "license": "MIT",
+  "homepage": "https://npad.run",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibedevesh/npad-ai.git",
+    "directory": "packages/mcp"
+  },
+  "keywords": ["mcp", "npad", "ai", "agents", "claude", "notes"],
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
-    "npad-mcp": "./src/index.ts"
+    "npad-mcp": "./dist/index.js"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./sqlite-store": "./src/stores/sqlite.ts",
-    "./http-store": "./src/stores/http.ts",
-    "./config": "./src/config.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./sqlite-store": {
+      "types": "./dist/stores/sqlite.d.ts",
+      "import": "./dist/stores/sqlite.js"
+    },
+    "./http-store": {
+      "types": "./dist/stores/http.d.ts",
+      "import": "./dist/stores/http.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js"
+    }
   },
+  "files": ["dist"],
   "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build",
     "dev": "tsx src/index.ts",
-    "start": "tsx src/index.ts",
+    "start": "node dist/index.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -25,6 +50,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
+    "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

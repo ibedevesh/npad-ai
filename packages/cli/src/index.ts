@@ -32,7 +32,6 @@ function flag(name: string): string | null {
   return v ?? null;
 }
 
-// ─── formatting helpers ────────────────────────────────────────────
 
 function fmtListLine(n: { id: string; title: string; tags: string[]; updatedAt: number }): string {
   const id = c.cyan(pad(n.id, 6));
@@ -185,72 +184,65 @@ async function cmdDoctor() {
 
 async function cmdLogin() {
   const apiUrl = process.env.NPAD_API_URL ?? DEFAULT_API_URL;
-  const port = await findFreePort();
+
+  // Step 1: ask the server for a device code.
+  const startRes = await fetch(`${apiUrl}/api/auth/device/start`, { method: "POST" });
+  if (!startRes.ok) die(`could not start login: ${startRes.status} ${await startRes.text()}`);
+  const { code, verifyUrl, expiresAt } = (await startRes.json()) as {
+    code: string;
+    verifyUrl: string;
+    expiresAt: number;
+  };
+
+  // Step 2: show the code and open the browser.
   console.log("");
-  info(`opening ${c.cyan(`${apiUrl}/login`)} ${c.dim("in your browser…")}`);
+  info(`code: ${c.bold(c.cyan(code))}`);
+  info(c.dim(`opening ${verifyUrl} in your browser…`));
+  info(c.dim("if it doesn't open, paste that URL into your browser yourself."));
+  await openInBrowser(verifyUrl).catch(() => {});
 
-  const result = await new Promise<{ apiKey: string; user: NonNullable<ReturnType<typeof readConfig>>["user"] }>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      server.close();
-      reject(new Error("login timed out after 5 minutes"));
-    }, 5 * 60 * 1000);
+  // Step 3: poll until the user authorizes (or it expires).
+  const pollIntervalMs = 2000;
+  const deadline = Math.min(expiresAt, Date.now() + 30 * 60 * 1000);
+  let lastTick = 0;
 
-    const server = createServer((req, res) => {
-      const corsHeaders = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "content-type",
-      };
-      if (req.method === "OPTIONS") {
-        res.writeHead(204, corsHeaders);
-        res.end();
-        return;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, pollIntervalMs));
+    let res: Response;
+    try {
+      res = await fetch(`${apiUrl}/api/auth/device/poll?code=${encodeURIComponent(code)}`);
+    } catch {
+      continue;
+    }
+    if (res.status === 410 || res.status === 404) {
+      die("login code expired or was cancelled. run `npad login` again.");
+    }
+    if (!res.ok) {
+      // Transient error — keep polling
+      continue;
+    }
+    const data = (await res.json()) as
+      | { pending: true }
+      | { apiKey: string; user: NonNullable<ReturnType<typeof readConfig>>["user"] };
+
+    if ("pending" in data && data.pending) {
+      const now = Date.now();
+      if (now - lastTick > 10_000) {
+        process.stderr.write(c.dim("…still waiting for sign-in\n"));
+        lastTick = now;
       }
-      if (req.url !== "/callback" || req.method !== "POST") {
-        res.writeHead(404, corsHeaders);
-        res.end();
-        return;
-      }
-      const chunks: Buffer[] = [];
-      req.on("data", (c) => chunks.push(c));
-      req.on("end", () => {
-        try {
-          const data = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-          res.writeHead(200, { "content-type": "application/json", ...corsHeaders });
-          res.end(JSON.stringify({ ok: true }));
-          clearTimeout(timeout);
-          server.close();
-          resolve(data);
-        } catch (e) {
-          res.writeHead(400, corsHeaders);
-          res.end();
-          clearTimeout(timeout);
-          server.close();
-          reject(e);
-        }
-      });
-    });
-    server.listen(port, "127.0.0.1");
-
-    const url = `${apiUrl}/login?cli_port=${port}`;
-    openInBrowser(url).catch(() => {
-      info(c.dim(`if the browser didn't open, visit: ${url}`));
-    });
-  });
-
-  if (!result.apiKey) {
-    die("login failed: no api key returned");
+      continue;
+    }
+    if ("apiKey" in data) {
+      writeConfig({ apiKey: data.apiKey, apiUrl, user: data.user });
+      console.log("");
+      ok(`signed in as ${c.cyan(data.user?.email ?? "unknown")}`);
+      info(c.dim(`api key saved to ${configPathHint()}`));
+      info(c.dim("now wire your agent: ") + c.cyan("claude mcp add --scope user npad -- npx -y @npad/mcp"));
+      return;
+    }
   }
-
-  writeConfig({
-    apiKey: result.apiKey,
-    apiUrl,
-    user: result.user,
-  });
-
-  ok(`signed in as ${c.cyan(result.user?.email ?? "unknown")}`);
-  info(c.dim(`api key saved to ${configPathHint()}`));
-  info(c.dim("now wire your agent: ") + c.cyan("claude mcp add --scope user npad -- npx -y @npad/mcp"));
+  die("login timed out after 30 minutes. run `npad login` again.");
 }
 
 async function cmdLogout() {
@@ -323,7 +315,6 @@ function die(msg: string): never {
   process.exit(1);
 }
 
-// ─── command handlers ──────────────────────────────────────────────
 
 async function cmdList(opts: { tag?: string; limit?: number } = {}) {
   const notes = await store.list({ tag: opts.tag, limit: opts.limit ?? 20 });
@@ -400,7 +391,6 @@ async function cmdRm(id: string) {
   ok(`deleted  ${c.cyan(note.id)}`);
 }
 
-// ─── interactive mode ──────────────────────────────────────────────
 
 async function pickNote(message: string): Promise<string | null> {
   const notes = await store.list({ limit: 50 });
@@ -498,7 +488,6 @@ async function interactive() {
   }
 }
 
-// ─── help (for `npad help` non-interactive) ────────────────────────
 
 function printHelp() {
   console.log("");
@@ -518,6 +507,7 @@ function printHelp() {
     ["edit <id>", "open " + c.dim("$EDITOR") + " to replace title + body"],
     ["rm <id>", "delete a note"],
     ["login", "sign in with Google (enables sync + sharing)"],
+    ["set-key <key>", "save an api key directly to ~/.npad/config.json"],
     ["logout", "remove saved api key"],
     ["path", "print DB path"],
     ["doctor", "diagnose env (mode, editor, api key)"],
@@ -529,7 +519,6 @@ function printHelp() {
   console.log("");
 }
 
-// ─── entrypoint ────────────────────────────────────────────────────
 
 async function main() {
   switch (cmd) {
@@ -593,6 +582,16 @@ async function main() {
     case "logout":
       await cmdLogout();
       return;
+    case "set-key": {
+      const key = args[1];
+      if (!key) die("usage: npad set-key <api-key>");
+      if (!key.startsWith("npad_")) die("api key should start with 'npad_'");
+      const apiUrl = process.env.NPAD_API_URL ?? DEFAULT_API_URL;
+      writeConfig({ apiKey: key, apiUrl });
+      ok(`api key saved → ${c.cyan(configPathHint())}`);
+      info(c.dim(`mode: hosted (${apiUrl})`));
+      return;
+    }
     default:
       die(`unknown command: ${cmd} — try ${c.cyan("npad help")}`);
   }

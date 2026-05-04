@@ -1,12 +1,23 @@
 {
   "name": "@npad/cli",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.2.0",
+  "description": "npad CLI — manage your AI agent notes from the terminal.",
+  "license": "MIT",
+  "homepage": "https://npad.run",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibedevesh/npad-ai.git",
+    "directory": "packages/cli"
+  },
+  "keywords": ["mcp", "npad", "ai", "agents", "cli", "notes"],
   "type": "module",
   "bin": {
-    "npad": "./src/index.ts"
+    "npad": "./dist/index.js"
   },
+  "files": ["dist"],
   "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -16,6 +27,7 @@
     "@npad/mcp": "workspace:*"
   },
   "devDependencies": {
+    "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
