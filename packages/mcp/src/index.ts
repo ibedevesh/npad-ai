@@ -107,6 +107,26 @@ const TOOLS = [
     },
   },
   {
+    name: "note_update",
+    description:
+      "Update an existing note's title, body, tags, or visibility. Use this to flip a note from 'private' to 'unlisted' (so it can be shared via URL), rename a note, replace its body, or change tags. Only fields you pass are changed; omitted fields are left as-is.\n\n" +
+      "RULES:\n" +
+      "- When changing visibility to 'unlisted', confirm with the user first: '<title> will become readable by anyone with the URL. Proceed?' Only call after they say yes.\n" +
+      "- For body replacement, prefer note_append for additive changes; use note_update only when the user explicitly wants to overwrite.\n" +
+      "- Returns the updated note.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        title: { type: "string" },
+        body: { type: "string" },
+        tags: { type: "array", items: { type: "string" } },
+        visibility: { type: "string", enum: ["private", "unlisted"] },
+      },
+      required: ["id"],
+    },
+  },
+  {
     name: "note_delete",
     description:
       "Permanently delete a note by id. DESTRUCTIVE and irreversible.\n\n" +
@@ -174,6 +194,17 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
         const note = await store.fork(String(a.id ?? ""));
         if (!note) return err(`Note not found: ${a.id}`);
         return ok({ id: note.id, url: idToUrl(note.id, baseUrl), title: note.title });
+      }
+      case "note_update": {
+        const note = await store.update({
+          id: String(a.id ?? ""),
+          title: typeof a.title === "string" ? a.title : undefined,
+          body: typeof a.body === "string" ? a.body : undefined,
+          tags: Array.isArray(a.tags) ? (a.tags as string[]) : undefined,
+          visibility: a.visibility === "unlisted" || a.visibility === "private" ? a.visibility : undefined,
+        });
+        if (!note) return err(`Note not found: ${a.id}`);
+        return ok({ id: note.id, url: idToUrl(note.id, baseUrl), title: note.title, visibility: note.visibility, updatedAt: note.updatedAt });
       }
       case "note_delete": {
         const ok_ = await store.delete(String(a.id ?? ""));
