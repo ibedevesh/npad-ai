@@ -271,12 +271,27 @@ app.post("/n", async (c) => {
   });
 });
 
-// Read — always returns JSON. The HTML viewer lives at /n/:id/view and is what
-// the landing page / dashboard link to for browsers. Agents fetching /n/:id
-// always get structured JSON (note body if authorized, setup hint otherwise).
+// Read — content-negotiates. Browsers (Accept: text/html + Mozilla UA) get the
+// HTML viewer; agents/CLIs get JSON. Same URL works for humans and agents, so
+// users only ever need to share `npad.run/n/:id`.
 app.get("/n/:id", async (c) => {
   const id = parseId(c.req.param("id"));
   if (!id) return c.json({ error: "invalid id" }, 400);
+
+  const accept = c.req.header("accept") ?? "";
+  const ua = c.req.header("user-agent") ?? "";
+  const wantsHtml = accept.includes("text/html") && /Mozilla\//.test(ua);
+  if (wantsHtml) {
+    const s2 = sql();
+    const rs = (await s2`SELECT id, title, body, visibility, updated_at FROM notes WHERE id = ${id}`) as Array<{
+      id: string; title: string; body: string; visibility: Visibility; updated_at: number;
+    }>;
+    const r = rs[0];
+    if (!r || r.visibility === "private") return c.html(notFound(), 404);
+    return c.html(notePreview({
+      id: r.id, title: r.title, body: r.body, visibility: r.visibility, updatedAt: Number(r.updated_at),
+    }));
+  }
 
   const s = sql();
   const rows = (await s`SELECT * FROM notes WHERE id = ${id}`) as Row[];
