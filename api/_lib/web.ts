@@ -49,10 +49,11 @@ body {
 body::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background-image:
-    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 40%, black 50%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 40%, black 50%, transparent 100%);
 }
 header, main, footer { position: relative; z-index: 1; }
 header {
@@ -85,6 +86,147 @@ header nav a {
 }
 header nav a:hover { color: var(--fg); }
 main { flex: 1; max-width: 760px; margin: 0 auto; padding: 64px 24px 48px; width: 100%; }
+main.wide { max-width: 880px; }
+.note-meta { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; color: var(--muted); font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 18px; }
+.note-meta .dot-sep { color: var(--dim); }
+.note-title { font-size: 40px; line-height: 1.1; letter-spacing: -1.4px; margin: 0 0 28px; font-weight: 600; }
+.note-body { font-size: 15.5px; line-height: 1.75; color: #D4D4D8; }
+.note-body h1, .note-body h2, .note-body h3 { color: var(--fg); letter-spacing: -0.5px; margin: 32px 0 12px; font-weight: 600; text-transform: none; }
+.note-body h1 { font-size: 28px; }
+.note-body h1::before { display: none; }
+.note-body h2 { font-size: 22px; font-family: inherit; color: var(--fg); text-transform: none; letter-spacing: -0.3px; }
+.note-body h2::before { display: none; }
+.note-body h3 { font-size: 17px; }
+.note-body p { color: #C8C8CE; margin: 0 0 14px; }
+.note-body ul, .note-body ol { padding-left: 22px; margin: 0 0 16px; color: #C8C8CE; }
+.note-body li { margin: 4px 0; }
+.note-body a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(245,165,36,0.4); }
+.note-body strong { color: var(--fg); font-weight: 600; }
+.note-body em { color: #E4E4E7; }
+.note-body hr { border: 0; height: 1px; background: var(--border-strong); margin: 28px 0; }
+.note-body blockquote { border-left: 2px solid var(--accent); margin: 16px 0; padding: 4px 0 4px 16px; color: var(--muted); font-style: italic; }
+.note-body pre { background: #030305; padding: 16px 18px; border-radius: 8px; user-select: text; }
+.note-body pre::before { content: ''; margin: 0; }
+.note-body :not(pre) > code { font-size: 13px; }
+.share-bar {
+  margin-top: 40px; padding: 18px 20px; border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--card), var(--card-2));
+  border-radius: 10px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
+}
+.share-bar .label { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; }
+.share-bar .url { font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--fg); user-select: all; }
+.share-bar .actions { display: flex; gap: 8px; }
+.toggle-row { display: flex; gap: 6px; margin: 18px 0 14px; }
+.toggle-row button {
+  background: transparent; border: 1px solid var(--border-strong); color: var(--muted);
+  padding: 6px 14px; font-size: 12px; border-radius: 6px;
+  font-family: 'Geist Mono', monospace; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.toggle-row button.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.toggle-row button:hover { transform: none; box-shadow: none; }
+.raw-note {
+  border: 1px solid var(--border-strong); border-radius: 12px; overflow: hidden;
+  background: #030305; margin: 8px 0 28px;
+}
+.raw-note-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; border-bottom: 1px solid var(--border);
+  font-family: 'Geist Mono', monospace; font-size: 11.5px;
+  text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--muted); background: rgba(255,255,255,0.015);
+}
+.raw-note-head span:first-child { color: var(--accent); }
+.raw-note-meta { color: var(--dim); }
+.raw-note-body {
+  margin: 0; border: 0; border-radius: 0; background: transparent;
+  padding: 22px 24px; max-height: 720px; overflow: auto;
+  white-space: pre-wrap; word-wrap: break-word;
+  user-select: none; -webkit-user-select: none;
+  font-size: 13.5px; line-height: 1.7; color: #D4D4D8;
+}
+.raw-note-body::before { content: ''; margin: 0; }
+.login-wrap {
+  min-height: calc(100vh - 180px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 16px;
+}
+.login-card {
+  width: 100%; max-width: 440px;
+  background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 40px 36px 32px;
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(245,165,36,0.04),
+    0 24px 60px rgba(0,0,0,0.6),
+    0 0 80px rgba(245,165,36,0.06);
+}
+.login-card::before {
+  content: ''; position: absolute; inset: -1px;
+  border-radius: 16px; padding: 1px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(245,165,36,0.25), transparent 40%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.login-mark {
+  display: flex; align-items: baseline; justify-content: center; gap: 2px;
+  margin-bottom: 6px;
+}
+.login-mark-text {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--fg);
+}
+.login-eyebrow {
+  text-align: center; font-family: 'Geist Mono', monospace;
+  font-size: 11px; color: var(--muted); letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 32px;
+}
+.login-title {
+  font-size: 28px; letter-spacing: -0.8px; margin: 0 0 10px;
+  text-align: center; font-weight: 600;
+}
+.login-sub {
+  text-align: center; color: var(--muted);
+  font-size: 14px; line-height: 1.6; margin: 0 0 28px;
+}
+.login-btn {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--fg); color: #07070A;
+  padding: 13px 18px; font-size: 14.5px; font-weight: 500;
+  border: 0; border-radius: 10px; cursor: pointer;
+  font-family: inherit; letter-spacing: -0.1px;
+  transition: transform 120ms ease, box-shadow 200ms ease;
+}
+.login-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(255,255,255,0.08); }
+.login-btn svg { flex-shrink: 0; }
+.login-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 24px 0 20px; color: var(--dim);
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 2px;
+}
+.login-divider::before, .login-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.login-cli-label {
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  color: var(--muted); letter-spacing: 1.2px;
+  text-transform: uppercase; margin-bottom: 8px; text-align: center;
+}
+.login-cli pre { margin: 0; }
+.login-foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 8px 12px; margin-top: 28px; padding-top: 22px;
+  border-top: 1px solid var(--border);
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  color: var(--dim); letter-spacing: 0.8px; text-transform: uppercase;
+}
+.login-foot span:first-child { color: var(--accent); }
+.login-terms {
+  margin-top: 20px; font-size: 12.5px; text-align: center;
+}
 h1 {
   font-size: 44px; line-height: 1.08; margin: 0 0 18px;
   letter-spacing: -1.2px; font-weight: 600; color: var(--fg);
@@ -246,7 +388,64 @@ function escape(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function shell(title: string, body: string, opts: { authed?: boolean } = {}): string {
+function renderMarkdown(src: string): string {
+  const lines = src.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let i = 0;
+  const inline = (s: string): string => {
+    let t = escape(s);
+    t = t.replace(/`([^`]+)`/g, (_m, c) => `<code>${c}</code>`);
+    t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    t = t.replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+    t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, txt, href) => `<a href="${txt && href ? href : "#"}" rel="noopener">${txt}</a>`);
+    t = t.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (_m, pre, url) => `${pre}<a href="${url}" rel="noopener">${url}</a>`);
+    return t;
+  };
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^```/.test(line)) {
+      const lang = line.slice(3).trim();
+      const buf: string[] = [];
+      i++;
+      while (i < lines.length && !/^```/.test(lines[i])) { buf.push(lines[i]); i++; }
+      i++;
+      const langAttr = lang ? ` data-lang="${escape(lang)}"` : "";
+      out.push(`<div class="copy"><pre class="no-prompt"${langAttr}>${escape(buf.join("\n"))}</pre></div>`);
+      continue;
+    }
+    if (/^#{1,6}\s/.test(line)) {
+      const m = line.match(/^(#{1,6})\s+(.*)$/)!;
+      const level = m[1].length;
+      out.push(`<h${level}>${inline(m[2])}</h${level}>`);
+      i++; continue;
+    }
+    if (/^\s*---+\s*$/.test(line)) { out.push("<hr/>"); i++; continue; }
+    if (/^\s*>/.test(line)) {
+      const buf: string[] = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) { buf.push(lines[i].replace(/^\s*>\s?/, "")); i++; }
+      out.push(`<blockquote>${inline(buf.join(" "))}</blockquote>`); continue;
+    }
+    if (/^\s*[-*+]\s+/.test(line)) {
+      const buf: string[] = [];
+      while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) { buf.push(lines[i].replace(/^\s*[-*+]\s+/, "")); i++; }
+      out.push(`<ul>${buf.map((b) => `<li>${inline(b)}</li>`).join("")}</ul>`); continue;
+    }
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const buf: string[] = [];
+      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) { buf.push(lines[i].replace(/^\s*\d+\.\s+/, "")); i++; }
+      out.push(`<ol>${buf.map((b) => `<li>${inline(b)}</li>`).join("")}</ol>`); continue;
+    }
+    if (line.trim() === "") { i++; continue; }
+    const buf: string[] = [];
+    while (i < lines.length && lines[i].trim() !== "" && !/^(#|```|>|\s*[-*+]\s|\s*\d+\.\s|---)/.test(lines[i])) {
+      buf.push(lines[i]); i++;
+    }
+    out.push(`<p>${inline(buf.join(" "))}</p>`);
+  }
+  return out.join("\n");
+}
+
+function shell(title: string, body: string, opts: { authed?: boolean; wide?: boolean } = {}): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -266,7 +465,7 @@ function shell(title: string, body: string, opts: { authed?: boolean } = {}): st
       <a href="https://github.com/ibedevesh/npad-ai" target="_blank" rel="noopener">github</a>
     </nav>
   </header>
-  <main>${body}</main>
+  <main${opts.wide ? ' class="wide"' : ""}>${body}</main>
   <footer>npad · notepad for agents · MIT · <a href="https://github.com/ibedevesh/npad-ai" style="color:var(--muted);">github</a></footer>
   <script>
     document.querySelectorAll('.copy').forEach(el => {
@@ -359,19 +558,38 @@ export function installPage(): string {
 
 export function login(): string {
   const body = `
-    <div class="center" style="padding-top: 32px;">
-      <div class="brand-big">npad<span class="dot">.</span>ai</div>
-      <p class="muted" style="margin-bottom: 36px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">notepad for agents</p>
-      <div class="card glow" style="max-width: 420px; margin: 0 auto; padding: 32px 28px;">
-        <h1 style="font-size: 22px; margin-bottom: 8px; letter-spacing: -0.5px;">Sign in to continue</h1>
-        <p style="margin-bottom: 24px;">One click with Google. No password, no setup.</p>
-        <button id="signin" class="primary" style="width:100%;">
-          <svg width="16" height="16" viewBox="0 0 48 48" style="display:inline-block; vertical-align:middle;"><path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.5 2.4-7.2 2.4-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.6l6.2 5.2C40.9 36.5 44 30.7 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
-          Continue with Google
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="login-mark">
+          <span class="login-mark-text">npad<span class="dot">.</span>ai</span>
+          <span class="caret"></span>
+        </div>
+        <div class="login-eyebrow">notepad for agents</div>
+
+        <h1 class="login-title">Sign in</h1>
+        <p class="login-sub">One click with Google. No password, no setup. Your CLI picks up the key automatically.</p>
+
+        <button id="signin" class="login-btn">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.5 2.4-7.2 2.4-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.6l6.2 5.2C40.9 36.5 44 30.7 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
+          <span>Continue with Google</span>
         </button>
-        <p class="muted" id="status" style="margin: 20px 0 0; min-height: 18px; font-size: 13px;"></p>
+
+        <p class="muted" id="status" style="margin: 16px 0 0; min-height: 18px; font-size: 13px; text-align: center;"></p>
+
+        <div class="login-divider"><span>or</span></div>
+
+        <div class="login-cli">
+          <div class="login-cli-label">already have the CLI?</div>
+          <div class="copy"><pre>npad login</pre></div>
+        </div>
+
+        <div class="login-foot">
+          <span>● secure</span><span class="dot-sep">·</span>
+          <span>google oauth</span><span class="dot-sep">·</span>
+          <span>open source</span>
+        </div>
       </div>
-      <p class="muted" style="margin-top: 28px; font-size: 13px;">By signing in you agree to our <a href="https://github.com/ibedevesh/npad-ai">terms</a>.</p>
+      <p class="muted login-terms">By signing in you agree to our <a href="https://github.com/ibedevesh/npad-ai">terms</a>.</p>
     </div>
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
@@ -589,17 +807,18 @@ export function notePreview(note: { id: string; title: string; visibility: strin
   const visBadge = note.visibility === "domain" ? "company" : "unlisted";
   const ageDays = Math.floor((Date.now() - note.updatedAt) / (1000 * 60 * 60 * 24));
   const ageStr = ageDays === 0 ? "today" : ageDays === 1 ? "1 day ago" : `${ageDays} days ago`;
-  const showBody = note.visibility !== "private" && typeof note.body === "string" && note.body.length > 0;
-  const bodyBlock = showBody
+  const hasBody = note.visibility !== "private" && typeof note.body === "string" && note.body.length > 0;
+  const shareUrl = `https://npad.run/n/${note.id}`;
+  const charCount = hasBody ? note.body!.length : 0;
+
+  const bodyBlock = hasBody
     ? `
-      <h2>Note contents</h2>
-      <p class="muted" style="font-size:13px;">Showing raw markdown — exactly what an agent will read. Verify before sharing or running.</p>
-      <div class="card" style="padding: 0;">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); font-family: 'Geist Mono', monospace; font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;">
-          <span>● note.md · ${escape(`${note.body!.length} chars`)}</span>
-          <span class="tag">read-only</span>
+      <div class="raw-note">
+        <div class="raw-note-head">
+          <span>● ${escape(note.title)}.md</span>
+          <span class="raw-note-meta">${charCount.toLocaleString()} chars · read-only</span>
         </div>
-        <pre class="no-prompt" style="margin: 0; border: 0; border-radius: 0 0 11px 11px; background: #030305; max-height: 560px; overflow: auto; white-space: pre-wrap; word-wrap: break-word; user-select: text; padding: 18px 20px;">${escape(note.body!)}</pre>
+        <pre class="no-prompt raw-note-body">${escape(note.body!)}</pre>
       </div>
     `
     : `
@@ -607,32 +826,51 @@ export function notePreview(note: { id: string; title: string; visibility: strin
         <p style="margin: 0;">🔒  This note is private. Only the owner can read its contents.</p>
       </div>
     `;
+
   const body = `
-    <p style="margin-bottom: 8px;"><span class="tag accent">${escape(visBadge)}</span><span class="tag">updated ${escape(ageStr)}</span><span class="tag">id ${escape(note.id)}</span></p>
-    <h1 style="font-size: 36px; letter-spacing: -1px; margin-bottom: 24px;">${escape(note.title)}</h1>
+    <div class="note-meta">
+      <span style="color: var(--accent);">● ${escape(visBadge)}</span>
+      <span class="dot-sep">·</span>
+      <span>updated ${escape(ageStr)}</span>
+      <span class="dot-sep">·</span>
+      <span>id ${escape(note.id)}</span>
+      ${hasBody ? `<span class="dot-sep">·</span><span>${charCount.toLocaleString()} chars</span>` : ""}
+    </div>
+    <h1 class="note-title">${escape(note.title)}</h1>
 
     ${bodyBlock}
 
-    <h2>Read this in your agent</h2>
-    <ul class="steps">
-      <li><span class="num">01</span><div>Make sure npad is set up (<a href="/install">install guide</a>).</div></li>
-      <li><span class="num">02</span><div>Paste this URL into your agent (Claude Code, Codex, Cursor):
-        <div class="copy" style="margin-top:6px;"><pre class="no-prompt">${escape(`https://npad.ai/n/${note.id}`)}</pre></div>
-      </div></li>
-      <li><span class="num">03</span><div>Tell your agent: <i>"read this npad note and continue"</i>. It'll fetch the full body via the API.</div></li>
-    </ul>
-
-    <div class="divider"></div>
-
-    <div class="center">
-      <p class="muted" style="margin-bottom: 16px;">New to npad? It's a notepad your AI agents read and write to.</p>
-      <div class="row center">
-        <a class="btn primary" href="/login">→ Get started</a>
-        <a class="btn secondary" href="/">Learn more</a>
+    ${hasBody ? `
+    <div class="share-bar">
+      <div>
+        <div class="label">feed this URL to your agent</div>
+        <div class="url" style="margin-top: 6px;">${escape(shareUrl)}</div>
+      </div>
+      <div class="actions">
+        <button class="secondary" id="copy-url">copy url</button>
+        <a class="btn primary" href="/install">install npad</a>
       </div>
     </div>
+    <p class="muted" style="font-size: 12.5px; margin-top: 14px; text-align: center;">
+      paste the URL into Claude Code, Codex or Cursor — the agent fetches the full body via npad's API.
+    </p>
+    ` : ""}
+
+    <script>
+      (function() {
+        const cu = document.getElementById('copy-url');
+        if (cu) cu.onclick = async () => {
+          await navigator.clipboard.writeText(${JSON.stringify(shareUrl)});
+          cu.textContent = 'copied!';
+          setTimeout(() => cu.textContent = 'copy url', 1200);
+        };
+        // Discourage copying the body — the goal is to share the URL, not the contents.
+        const rb = document.querySelector('.raw-note-body');
+        if (rb) rb.addEventListener('copy', (e) => e.preventDefault());
+      })();
+    </script>
   `;
-  return shell(note.title, body);
+  return shell(note.title, body, { wide: true });
 }
 
 export function notFound(): string {
