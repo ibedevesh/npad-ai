@@ -4,7 +4,7 @@
 
 # npad
 
-**notepad for agents** — a scratchpad your AI agents read and write to, so knowledge survives across terminals, sessions, and tools.
+**notepad for agents** — one shared notepad your agents read, write, and pick up where another left off.
 
 [![npm](https://img.shields.io/npm/v/@npad/cli?color=F5A524&label=%40npad%2Fcli&labelColor=07070A)](https://www.npmjs.com/package/@npad/cli)
 [![license](https://img.shields.io/badge/license-MIT-F5A524?labelColor=07070A)](LICENSE)
@@ -15,76 +15,69 @@
 ---
 
 ```
-Terminal 1 (Claude Code):
-  you:    save how we portforwarded Dumbledore
-  claude: → note_write → saved (id: k7f2a)
+> new to the team — can you set up the checkout service locally?
+  here's our runbook: npad.run/n/k7f2a
 
-Terminal 2 (Codex, two days later):
-  you:    how did we portforward Dumbledore?
-  codex:  → note_search "dumbledore" → finds k7f2a → reads it → continues
+claude: → note_read("k7f2a") → reads runbook
+        → clone, vault pull, docker compose, migrate, seed
+        → handles the gotcha the runbook flagged
+        → "Done. Checkout running locally with tenant acme-test."
 ```
 
-Every agent — Claude Code, Codex, Cursor, anything that speaks MCP — reads from and writes to the same notepad. **Save once, recall forever.**
+One link. Your agent skips the figuring-out — and the tokens it would've burned getting there.
 
-## Why
+## npad isn't memory
 
-- `CLAUDE.md` is local to one tool, project-scoped, and rots.
-- Notion is for humans, not agents.
-- npad is the missing layer: one place every agent writes to and reads from, with stable URLs you can hand to a teammate.
+| Memory | npad |
+|---|---|
+| What an agent remembers about *you* | What you tell an agent to *save* |
+| Implicit, private, account-bound | Explicit. Has an id. Has a URL. |
+| Stays in your account | Goes into a Slack thread, a teammate's agent, a public link |
 
-## Install
+**Memory remembers you. npad remembers the work.** They coexist.
+
+## What you can do with it
+
+- **Across your terminals** — fix it in Claude today, recall it in Codex tomorrow. Same notepad, every tool.
+- **Across your team** — paste `npad.run/n/k7f2a`. Their agent reads it directly, picks up where yours finished.
+- **Across agents (saves tokens)** — Claude figures something out once. Cursor doesn't re-explore the same paths next week — it reads the note and ships.
+
+## Install · 3 commands
 
 ```bash
-npm i -g @npad/cli                                       # CLI
-npad login                                               # one-time sign-in
-claude mcp add --scope user npad -- npx -y @npad/mcp     # wires up Claude Code
+npm i -g @npad/cli
+npad login
+claude mcp add --scope user npad -- npx -y @npad/mcp
 ```
 
-That's it. Local mode works offline forever, no signup. Run `npad login` only if you want sync across machines or shareable URLs.
+Restart your agent. Done — your Claude Code / Codex / Cursor now has 6 npad tools. Works offline against a local SQLite DB. Sign in only when you want sync or shareable URLs.
 
-## What you get
-
-**6 MCP tools for your agents:**
+## The 6 MCP tools your agent gets
 
 | Tool | What it does |
 |---|---|
-| `note_write` | save a note with title + body + optional tags + visibility |
+| `note_write` | save a note (title, body, tags, visibility) |
 | `note_read` | fetch a note by id or URL |
 | `note_append` | add a section to an existing note |
-| `note_search` | keyword search across your vault |
+| `note_update` | edit an existing note |
+| `note_search` | keyword search across the vault |
 | `note_fork` | copy any note (yours or unlisted) into your own vault |
-| `note_delete` | remove a note (agent always confirms first) |
-
-**A friendly CLI for humans:**
-
-```
-npad           # interactive menu
-npad list      # recent notes
-npad new       # opens VS Code / Cursor / nano
-npad search    # keyword search
-npad show ID
-npad edit ID
-npad rm ID
-npad doctor    # diagnose your setup
-npad login     # sign in (enables sync + sharing)
-```
+| `note_delete` | remove a note (agent confirms first) |
 
 ## Sharing
 
-Mark a note `unlisted` and you get a stable URL like `npad.run/n/k7f2a`. Paste it anywhere — Slack, email, README. Anyone you send it to can:
+Mark a note `unlisted` and you get a stable URL like `npad.run/n/k7f2a`. Send it anywhere:
 
-1. **Open it in their agent** — their npad-equipped Claude/Codex calls `note_read` and gets the body.
-2. **Open it in a browser** — they see the rendered note in a read-only "note.md" panel, so humans can verify before passing it to an agent.
+1. **Their agent** — npad-equipped Claude/Codex calls `note_read` and gets the body.
+2. **A browser** — humans see a rendered read-only view, can verify before passing to an agent.
 
-Three visibility levels:
-
-| Level | Who can read |
+| Visibility | Who can read |
 |---|---|
 | `private` (default) | only you |
 | `unlisted` | anyone with the URL |
-| `domain` | signed-in users with the same email domain (e.g. `@yourcompany.com`) |
+| `domain` | signed-in users with the same email domain |
 
-Recipients can't edit, only `note_fork` to their own vault — sharing stays clean and append-free.
+Recipients can't edit — only `note_fork` to their own vault. Sharing stays clean and append-free.
 
 ## Architecture
 
@@ -99,14 +92,16 @@ Recipients can't edit, only `note_fork` to their own vault — sharing stays cle
                                                 + Firebase Auth
 ```
 
-Monorepo:
-
 | Package | What |
 |---|---|
 | [`packages/core`](packages/core) | types, Store interface, id helpers |
 | [`packages/mcp`](packages/mcp) | the `npx @npad/mcp` server with sqlite + http stores |
 | [`packages/cli`](packages/cli) | the `npad` command for humans |
 | [`api/`](api) | Hono API for hosted mode (Vercel entrypoint) |
+
+## What's next
+
+A public layer — agents hit an error, search npad, find a fix another agent shipped last week. Knowledge compounds across teams, not just within them. Star the repo if that's interesting.
 
 ## Star history
 
@@ -119,4 +114,4 @@ Monorepo:
 
 ## License
 
-MIT. Use it, fork it, sell it.
+MIT.
