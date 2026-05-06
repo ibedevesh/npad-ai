@@ -1,59 +1,43 @@
-# Contributing to npad
+# Contributing
 
-Thanks for the interest. npad is small, opinionated, and we'd like to keep it that way — but good PRs are very welcome.
+Thanks for taking a look. npad is a small project — bug fixes, docs improvements, and new agent integrations are all welcome.
 
-## How to contribute
+If you're planning anything bigger than a fix, open an issue first so we can talk it through before you sink time into a PR.
 
-1. **Fork** this repo to your own GitHub account.
-2. **Branch** off `main`: `git checkout -b feat/<short-description>` (or `fix/`, `docs/`, `chore/`).
-3. **Code** — keep it focused. One PR per change.
-4. **Test** — at minimum run `pnpm -r typecheck` and `pnpm --filter @npad/mcp exec tsx src/smoke.ts`.
-5. **Open a PR** against `main`. Fill in the template (what + why).
-6. A maintainer reviews, suggests changes if needed, and merges. **Direct pushes to `main` are blocked** — every change goes through review.
-
-## Local development
+## Setup
 
 ```bash
-git clone https://github.com/<you>/npad-ai
+git clone https://github.com/ibedevesh/npad-ai
 cd npad-ai
 pnpm install
-pnpm rebuild better-sqlite3                  # native module, one-time
-pnpm -r typecheck                            # should pass clean
+pnpm rebuild better-sqlite3   # one-time, native module
+pnpm -r typecheck
+```
 
-# wire your local clone into Claude Code:
+Wire your local clone into Claude Code:
+
+```bash
 claude mcp add npad -- /full/path/to/npad-ai/node_modules/.bin/tsx \
   /full/path/to/npad-ai/packages/mcp/src/index.ts
 ```
 
-## What we're looking for
+## Sending a PR
 
-- **Bug fixes** — always welcome.
-- **Cross-tool MCP integration examples** — Codex, Cursor, Zed, anything new.
-- **CLI ergonomics** — better output, faster commands, more useful `npad doctor` checks.
-- **Search quality** — pgvector / embedding integrations for hosted mode.
-- **Documentation** — typos, clarifications, more examples.
-
-## What we'll usually decline
-
-- New visibility levels beyond `private` / `unlisted` / `domain` (premature complexity until users ask).
-- "Workspaces" / per-project scopes — title encodes context, search filters by relevance. Discussed and decided.
-- Anything that breaks the "URL is the share primitive" model.
-- Heavy frontend frameworks for the hosted UI — server-rendered HTML is a feature, not a bug.
-
-If you have an idea that touches design (not just bugs), open an issue first to discuss. Saves both of us from sunk-cost PR rewrites.
+- Branch off `main` (`feat/...`, `fix/...`, `docs/...`).
+- Keep it focused — one change per PR.
+- Run `pnpm -r typecheck` before pushing.
+- In the PR description, say *what* changed and *why*.
 
 ## Code style
 
-- TypeScript everywhere. ESM only.
-- No comments unless they explain *why*, not *what*.
-- Keep dependencies tiny. If you add a new one, justify it in the PR description.
-- Match the existing structure — look around before introducing new patterns.
+- TypeScript, ESM.
+- Comments should explain *why*, not *what*. If the code is clear, skip the comment.
+- Keep dependencies minimal. If you add one, mention why in the PR.
 
-## Issues & security
+## Security
 
-- File bugs and feature requests in [GitHub Issues](https://github.com/ibedevesh/npad-ai/issues).
-- For security issues (exposed credentials, auth bypass, etc.), email the maintainer privately rather than opening a public issue.
+For anything sensitive (auth bypass, leaked credentials, etc.), please email me directly instead of filing a public issue.
 
 ## License
 
-By contributing, you agree your contributions are licensed under the MIT License (same as the repo).
+By contributing you agree your contributions are MIT-licensed, same as the project.
