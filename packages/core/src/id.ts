@@ -23,8 +23,8 @@ export function newApiKey(): string {
 /**
  * Accepts any of:
  *   "k7f2a"
- *   "npad.ai/n/k7f2a"
- *   "https://npad.ai/n/k7f2a"
+ *   "npad.run/n/k7f2a"
+ *   "https://npad.run/n/k7f2a"
  *   "http://localhost:8787/n/k7f2a"
  * Returns the bare id, or null if no valid id is found.
  */
@@ -40,6 +40,6 @@ export function parseId(input: string): string | null {
   return null;
 }
 
-export function idToUrl(id: string, baseUrl = "https://npad.ai"): string {
+export function idToUrl(id: string, baseUrl = "https://npad.run"): string {
   return `${baseUrl.replace(/\/$/, "")}/n/${id}`;
 }

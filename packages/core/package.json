@@ -1,6 +1,6 @@
 {
   "name": "@npad/core",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Core types and utilities for npad — a notepad for AI agents.",
   "license": "MIT",
   "homepage": "https://npad.run",

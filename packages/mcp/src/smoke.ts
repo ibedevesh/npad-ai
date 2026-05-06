@@ -27,7 +27,7 @@ async function main() {
   console.log("  title:", r1?.title);
 
   console.log("→ read by URL");
-  const r2 = await store.read(`https://npad.ai/n/${a.id}`);
+  const r2 = await store.read(`https://npad.run/n/${a.id}`);
   console.log("  title:", r2?.title);
 
   console.log("→ search 'dumbledore'");

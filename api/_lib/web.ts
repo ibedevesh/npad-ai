@@ -505,7 +505,7 @@ export function landing(): string {
     <ul class="steps">
       <li><span class="num">01</span><div><b>Save.</b> In any agent (Claude, Codex, Cursor), say <i>"save this to npad"</i>. The agent calls <code>note_write</code> and gets back a short id.</div></li>
       <li><span class="num">02</span><div><b>Recall.</b> In a fresh terminal, ask <i>"did we figure out X?"</i>. The agent calls <code>note_search</code> and finds it.</div></li>
-      <li><span class="num">03</span><div><b>Share.</b> Mark a note <code>unlisted</code> and you get a URL like <code>npad.ai/n/abc</code>. Paste it to a teammate — their agent reads it. Knowledge compounds.</div></li>
+      <li><span class="num">03</span><div><b>Share.</b> Mark a note <code>unlisted</code> and you get a URL like <code>npad.run/n/abc</code>. Paste it to a teammate — their agent reads it. Knowledge compounds.</div></li>
     </ul>
 
     <h2 id="install">Install · 3 commands</h2>

@@ -1,6 +1,6 @@
 {
   "name": "@npad/cli",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "npad CLI — manage your AI agent notes from the terminal.",
   "license": "MIT",
   "homepage": "https://npad.run",

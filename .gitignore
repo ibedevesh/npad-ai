@@ -1,10 +1,10 @@
-node_modules/
-dist/
-build/
+node_modules
+dist
+build
 *.log
 *.tsbuildinfo
 
-# env / local config
+# environment / local config
 .env
 .env.local
 .env.*.local
@@ -26,7 +26,9 @@ Thumbs.db
 # Vercel
 .vercel
 
-# secrets — never commit
+# Firebase / secrets — never commit
 *-firebase-adminsdk-*.json
 firebase-service-account.json
 secrets/
+
+.env*.local
