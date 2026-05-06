@@ -457,7 +457,7 @@ function shell(title: string, body: string, opts: { authed?: boolean; wide?: boo
 </head>
 <body>
   <header>
-    <a href="/" class="brand" style="text-decoration:none;">npad<span class="dot">.</span>ai<span class="caret"></span></a>
+    <a href="/" class="brand" style="text-decoration:none;">npad<span class="dot">.</span>run<span class="caret"></span></a>
     <nav>
       <a href="/">home</a>
       <a href="/install">install</a>
@@ -765,7 +765,7 @@ export function login(): string {
     <div class="login-wrap">
       <div class="login-card">
         <div class="login-mark">
-          <span class="login-mark-text">npad<span class="dot">.</span>ai</span>
+          <span class="login-mark-text">npad<span class="dot">.</span>run</span>
           <span class="caret"></span>
         </div>
         <div class="login-eyebrow">notepad for agents</div>
@@ -894,7 +894,7 @@ export function deviceLinkPage(code: string): string {
   const safeCode = escape(code);
   const body = `
     <div class="center" style="padding-top: 32px;">
-      <div class="brand-big">npad<span class="dot">.</span>ai</div>
+      <div class="brand-big">npad<span class="dot">.</span>run</div>
       <p class="muted" style="margin-bottom: 36px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">authorize device</p>
       <div class="card glow" style="max-width: 460px; margin: 0 auto; padding: 32px 28px;">
         <h1 style="font-size: 22px; margin-bottom: 8px; letter-spacing: -0.5px;">Confirm device code</h1>
