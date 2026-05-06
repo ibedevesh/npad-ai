@@ -457,7 +457,7 @@ function shell(title: string, body: string, opts: { authed?: boolean; wide?: boo
 </head>
 <body>
   <header>
-    <a href="/" class="brand" style="text-decoration:none;">npad<span class="dot">.</span>ai<span class="caret"></span></a>
+    <a href="/" class="brand" style="text-decoration:none;">npad<span class="dot">.</span>run<span class="caret"></span></a>
     <nav>
       <a href="/">home</a>
       <a href="/install">install</a>
@@ -489,10 +489,62 @@ function shell(title: string, body: string, opts: { authed?: boolean; wide?: boo
 
 export function landing(): string {
   const body = `
+    <style>
+      .demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 8px 0 4px; }
+      @media (max-width: 820px) { .demo-grid { grid-template-columns: 1fr; } }
+      .term {
+        background: #030305; border: 1px solid var(--border-strong); border-radius: 10px;
+        overflow: hidden; display: flex; flex-direction: column;
+      }
+      .term-head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 14px; border-bottom: 1px solid var(--border);
+        font-family: 'Geist Mono', monospace; font-size: 11px;
+        color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px;
+        background: rgba(255,255,255,0.015);
+      }
+      .term-head .dots { display: flex; gap: 5px; }
+      .term-head .dots span { width: 9px; height: 9px; border-radius: 50%; background: var(--border-strong); }
+      .term-body {
+        padding: 14px 16px; font-family: 'Geist Mono', monospace;
+        font-size: 12.5px; line-height: 1.7; color: #D4D4D8;
+        white-space: pre-wrap; min-height: 140px;
+      }
+      .term-body .you { color: var(--accent); }
+      .term-body .ai  { color: #A1A1AA; }
+      .term-body .arrow { color: var(--dim); }
+      .term-body .ok { color: #5EEAD4; }
+      .demo-tag { text-align: center; color: var(--muted); font-family: 'Geist Mono', monospace; font-size: 13px; margin-top: 14px; letter-spacing: 0.3px; }
+      .pillar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 8px 0; }
+      @media (max-width: 820px) { .pillar { grid-template-columns: 1fr; } }
+      .pillar .card h3 { margin: 0 0 8px; font-size: 15px; color: var(--fg); letter-spacing: -0.2px; }
+      .pillar .card p { margin: 0; color: #A1A1AA; font-size: 14px; line-height: 1.6; }
+      .compare {
+        background: linear-gradient(180deg, var(--card), var(--card-2));
+        border: 1px solid var(--border-strong); border-radius: 12px; padding: 22px 24px;
+        margin: 8px 0;
+      }
+      .compare h3 { margin: 0 0 8px; font-size: 16px; color: var(--fg); }
+      .compare p { margin: 0 0 6px; color: #A1A1AA; font-size: 14px; }
+      .compare .accent-line { color: var(--accent); }
+      details.faq {
+        border-bottom: 1px solid var(--border); padding: 16px 0;
+      }
+      details.faq summary {
+        cursor: pointer; font-weight: 500; color: var(--fg); font-size: 15px;
+        list-style: none; display: flex; justify-content: space-between; align-items: center;
+      }
+      details.faq summary::-webkit-details-marker { display: none; }
+      details.faq summary::after {
+        content: '+'; color: var(--accent); font-family: 'Geist Mono', monospace; font-size: 18px;
+      }
+      details.faq[open] summary::after { content: '−'; }
+      details.faq p { color: #A1A1AA; margin: 10px 0 0; font-size: 14px; line-height: 1.65; }
+    </style>
+
     <div class="hero">
-      <div class="eyebrow">v0.2 · open source · MIT</div>
       <h1>notepad<br/>for agents.</h1>
-      <p class="lead">A single scratchpad your agents read and write to — across terminals, sessions, and tools. Save once, recall forever.</p>
+      <p class="lead">Agents that learn from agents. One shared notepad your agents read, write, and pick up where another left off.</p>
       <div class="row center" style="margin-top: 28px;">
         <a class="btn primary" href="/login">→ Get started</a>
         <a class="btn secondary" href="https://github.com/ibedevesh/npad-ai" target="_blank">View on GitHub</a>
@@ -501,21 +553,173 @@ export function landing(): string {
 
     <div class="divider"></div>
 
-    <h2>How it works</h2>
-    <ul class="steps">
-      <li><span class="num">01</span><div><b>Save.</b> In any agent (Claude, Codex, Cursor), say <i>"save this to npad"</i>. The agent calls <code>note_write</code> and gets back a short id.</div></li>
-      <li><span class="num">02</span><div><b>Recall.</b> In a fresh terminal, ask <i>"did we figure out X?"</i>. The agent calls <code>note_search</code> and finds it.</div></li>
-      <li><span class="num">03</span><div><b>Share.</b> Mark a note <code>unlisted</code> and you get a URL like <code>npad.run/n/abc</code>. Paste it to a teammate — their agent reads it. Knowledge compounds.</div></li>
-    </ul>
+    <h2>What it looks like</h2>
+    <style>
+      .cc {
+        max-width: 760px; margin: 0 auto;
+        background: #0A0A0E; border: 1px solid var(--border-strong); border-radius: 10px;
+        overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+      }
+      .cc-head {
+        display: flex; align-items: center; gap: 10px;
+        padding: 9px 14px; border-bottom: 1px solid var(--border);
+        background: #07070A;
+        font-family: 'Geist Mono', monospace; font-size: 11.5px;
+        color: var(--muted); letter-spacing: 0.4px;
+      }
+      .cc-head .traffic { display: flex; gap: 6px; margin-right: 4px; }
+      .cc-head .traffic span { width: 11px; height: 11px; border-radius: 50%; }
+      .cc-head .traffic span:nth-child(1) { background: #FF5F57; }
+      .cc-head .traffic span:nth-child(2) { background: #FEBC2E; }
+      .cc-head .traffic span:nth-child(3) { background: #28C840; }
+      .cc-body {
+        padding: 22px 22px 18px; font-family: 'Geist Mono', monospace;
+        font-size: 13px; line-height: 1.65; color: #D4D4D8;
+      }
+      .cc-prompt {
+        border: 1px solid var(--border-strong); border-radius: 8px;
+        padding: 10px 14px; margin-bottom: 22px; background: rgba(255,255,255,0.015);
+        display: flex; gap: 10px;
+      }
+      .cc-prompt .gt { color: var(--accent); flex-shrink: 0; }
+      .cc-prompt .text { color: #E4E4E7; white-space: pre-wrap; }
+      .cc-prompt .link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+      .cc-step { margin: 0 0 14px; }
+      .cc-step .dot { color: #5EEAD4; }
+      .cc-step .tool { color: #E4E4E7; font-weight: 500; }
+      .cc-step .arg { color: #A1A1AA; }
+      .cc-step .res {
+        display: block; padding-left: 20px; color: #71717A;
+        white-space: pre-wrap; margin-top: 2px;
+      }
+      .cc-step .res .branch { color: var(--dim); }
+      .cc-final { color: #E4E4E7; padding-left: 0; }
+      .cc-final .dot { color: #5EEAD4; }
+    </style>
+    <div class="cc">
+      <div class="cc-head">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <span>claude-code</span>
+        <span style="color:var(--dim);">— new engineer · day 1</span>
+      </div>
+      <div class="cc-body"><div class="cc-prompt"><span class="gt">&gt;</span><span class="text">new to the team — can you set up the checkout service locally?
+here's our runbook: <span class="link">npad.run/n/k7f2a</span></span></div>
+<div class="cc-step"><span class="dot">⏺</span> I'll read the runbook and walk through it.</div>
+<div class="cc-step"><span class="dot">⏺</span> <span class="tool">note_read</span><span class="arg">(id: "k7f2a")</span><span class="res"><span class="branch">⎿</span>  # Checkout service · local dev setup
+   deps: postgres 15, redis, stripe-mock
+   env: pull from vault path \`kv/checkout/dev\`
+   seed: pnpm db:seed --tenant=acme-test
+   gotcha: STRIPE_WEBHOOK_SECRET must match stripe-mock, not prod</span></div>
+<div class="cc-step"><span class="dot">⏺</span> <span class="tool">Bash</span><span class="arg">(git clone git@github.com:acme/checkout &amp;&amp; cd checkout)</span><span class="res"><span class="branch">⎿</span>  Cloned into 'checkout'.</span></div>
+<div class="cc-step"><span class="dot">⏺</span> <span class="tool">Bash</span><span class="arg">(vault kv get -format=json kv/checkout/dev &gt; .env.local)</span><span class="res"><span class="branch">⎿</span>  Wrote 14 secrets to .env.local</span></div>
+<div class="cc-step"><span class="dot">⏺</span> <span class="tool">Bash</span><span class="arg">(docker compose up -d postgres redis stripe-mock)</span><span class="res"><span class="branch">⎿</span>  ✔ postgres · ✔ redis · ✔ stripe-mock</span></div>
+<div class="cc-step"><span class="dot">⏺</span> <span class="tool">Bash</span><span class="arg">(pnpm install &amp;&amp; pnpm db:migrate)</span><span class="res"><span class="branch">⎿</span>  Applied 23 migrations.</span></div>
+<div class="cc-step"><span class="dot">⏺</span> <span class="tool">Bash</span><span class="arg">(pnpm db:seed --tenant=acme-test)</span><span class="res"><span class="branch">⎿</span>  Seeded 1 tenant, 12 products, 3 test cards.</span></div>
+<div class="cc-step"><span class="dot">⏺</span> <span class="tool">Edit</span><span class="arg">(.env.local)</span> — set STRIPE_WEBHOOK_SECRET to stripe-mock value<span class="res"><span class="branch">⎿</span>  Updated 1 line. (per runbook gotcha)</span></div>
+<div class="cc-step"><span class="dot">⏺</span> <span class="tool">Bash</span><span class="arg">(pnpm dev)</span><span class="res"><span class="branch">⎿</span>  ▲ checkout ready on http://localhost:3000</span></div>
+<div class="cc-final"><span class="dot">⏺</span> Done. Checkout is running locally with tenant <span style="color:var(--accent);">acme-test</span> seeded. The runbook flagged one gotcha I handled: the webhook secret must match stripe-mock, not prod. Anything else to wire up?</div></div>
+    </div>
+    <div class="demo-tag">One link. Your agent skips the figuring-out — and the tokens it would've burned getting there.</div>
+
+    <div class="divider"></div>
+
+    <h2>npad isn't memory</h2>
+    <style>
+      .vs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; align-items: stretch; margin: 8px 0; border: 1px solid var(--border-strong); border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, var(--card), var(--card-2)); }
+      @media (max-width: 720px) { .vs { grid-template-columns: 1fr; } .vs .vs-divider { height: 1px; width: 100%; } }
+      .vs-side { padding: 26px 28px; }
+      .vs-side .label { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+      .vs-side h3 { margin: 0 0 10px; font-size: 18px; color: var(--fg); letter-spacing: -0.3px; font-weight: 600; }
+      .vs-side p { margin: 0; color: #A1A1AA; font-size: 14.5px; line-height: 1.65; }
+      .vs-side.npad .label { color: var(--accent); }
+      .vs-divider { width: 1px; background: var(--border-strong); }
+      .vs-foot { text-align: center; color: var(--muted); font-size: 13.5px; margin: 14px 0 4px; }
+      .vs-foot .accent { color: var(--accent); }
+
+      .flow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 8px 0; }
+      @media (max-width: 720px) { .flow { grid-template-columns: 1fr; } }
+      .flow-card {
+        background: linear-gradient(180deg, var(--card), var(--card-2));
+        border: 1px solid var(--border-strong); border-radius: 12px; padding: 22px 24px;
+        position: relative; overflow: hidden;
+      }
+      .flow-card .eyebrow-line {
+        font-family: 'Geist Mono', monospace; font-size: 11px;
+        color: var(--accent); text-transform: uppercase; letter-spacing: 1.6px;
+        margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+      }
+      .flow-card .eyebrow-line::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); box-shadow: var(--accent-glow); }
+      .flow-card h3 { margin: 0 0 8px; font-size: 17px; color: var(--fg); letter-spacing: -0.2px; font-weight: 600; }
+      .flow-card p { margin: 0; color: #A1A1AA; font-size: 14.5px; line-height: 1.65; }
+      .flow-card.wide { grid-column: 1 / -1; }
+      .flow-card .stat {
+        display: inline-flex; align-items: baseline; gap: 6px;
+        margin-top: 10px; padding: 4px 10px; border-radius: 6px;
+        background: var(--accent-soft); border: 1px solid rgba(245,165,36,0.25);
+        font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent);
+      }
+    </style>
+    <div class="vs">
+      <div class="vs-side">
+        <div class="label">Memory</div>
+        <h3>What an agent remembers about you.</h3>
+        <p>Your past chats, your preferences, the private context you'd never paste into Slack. Stays in your account.</p>
+      </div>
+      <div class="vs-divider"></div>
+      <div class="vs-side npad">
+        <div class="label">npad</div>
+        <h3>What you tell an agent to save.</h3>
+        <p>Has an id. Has a URL. Goes where memory can't — into your team, into a Slack thread, into a public link.</p>
+      </div>
+    </div>
+    <p class="vs-foot">Memory remembers <em>you</em>. <span class="accent">npad remembers the work.</span></p>
+
+    <h2>What you can do with it</h2>
+    <div class="flow">
+      <div class="flow-card">
+        <div class="eyebrow-line">Across your terminals</div>
+        <h3>Fix it in Claude today. Recall it in Codex tomorrow.</h3>
+        <p>Same notepad, every tool. Knowledge follows you between sessions instead of dying in chat history.</p>
+      </div>
+      <div class="flow-card">
+        <div class="eyebrow-line">Across your team</div>
+        <h3>Paste a link. Their agent reads it directly.</h3>
+        <p>Mark a note unlisted, share <code>npad.run/n/k7f2a</code>. Your teammate's agent picks up exactly where yours finished.</p>
+      </div>
+      <div class="flow-card wide">
+        <div class="eyebrow-line">Across agents · saves tokens too</div>
+        <h3>Agents that don't start from scratch.</h3>
+        <p>Claude figures something out. Cursor doesn't re-explore the same paths next week — it reads the note, skips the trial-and-error, and uses the tokens on actually shipping.</p>
+        <span class="stat">→ less re-exploration · fewer tokens burned · faster one-shots</span>
+      </div>
+    </div>
 
     <h2 id="install">Install · 3 commands</h2>
     <div class="copy"><pre>npm i -g @npad/cli</pre></div>
     <div class="copy"><pre>npad login</pre></div>
     <div class="copy"><pre>claude mcp add --scope user npad -- npx -y @npad/mcp</pre></div>
-    <p class="muted">Restart your agent. Done — your Claude Code / Codex / Cursor now has 6 npad tools.</p>
+    <p class="muted">Restart your agent. Done — your Claude Code / Codex / Cursor now has 6 npad tools. Works offline against a local SQLite DB. Sign in only when you want sync or shareable URLs.</p>
 
-    <h2>Local-first</h2>
-    <p>npad works offline against a local SQLite DB by default. Sign in only when you want to sync across machines or share notes with others.</p>
+    <h2>FAQ</h2>
+    <details class="faq">
+      <summary>Why not just keep a CLAUDE.md or markdown file?</summary>
+      <p>Local to one tool, one project, one machine. Doesn't follow you to Codex. Doesn't share with your team. Rots.</p>
+    </details>
+    <details class="faq">
+      <summary>Why not Notion or a wiki?</summary>
+      <p>Those are for humans to read. npad is for agents to read and write. Your agent updates it as it works — no one has to remember to document anything.</p>
+    </details>
+    <details class="faq">
+      <summary>Why not memory (mem0, ChatGPT memory, Cursor memory)?</summary>
+      <p>Memory is implicit and private. npad is explicit and shareable. Different problem. They can coexist — memory remembers <em>you</em>, npad remembers the <em>work</em>.</p>
+    </details>
+    <details class="faq">
+      <summary>What's stored, where?</summary>
+      <p>By default: a local SQLite file at <code>~/.npad/npad.db</code>. Nothing leaves your machine. If you <code>npad login</code>, synced notes live in Postgres (Neon) behind Firebase Auth. Self-hosting docs are coming. Code is MIT — read it, fork it, run it yourself.</p>
+    </details>
+
+    <h2>What's next</h2>
+    <p class="muted">A public layer — agents hit an error, search npad, find a fix another agent shipped last week. Knowledge compounds across teams, not just within them. <a href="https://github.com/ibedevesh/npad-ai" target="_blank">Star the repo</a> if that's interesting.</p>
   `;
   return shell("npad — notepad for agents", body);
 }
@@ -561,7 +765,7 @@ export function login(): string {
     <div class="login-wrap">
       <div class="login-card">
         <div class="login-mark">
-          <span class="login-mark-text">npad<span class="dot">.</span>ai</span>
+          <span class="login-mark-text">npad<span class="dot">.</span>run</span>
           <span class="caret"></span>
         </div>
         <div class="login-eyebrow">notepad for agents</div>
@@ -690,7 +894,7 @@ export function deviceLinkPage(code: string): string {
   const safeCode = escape(code);
   const body = `
     <div class="center" style="padding-top: 32px;">
-      <div class="brand-big">npad<span class="dot">.</span>ai</div>
+      <div class="brand-big">npad<span class="dot">.</span>run</div>
       <p class="muted" style="margin-bottom: 36px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">authorize device</p>
       <div class="card glow" style="max-width: 460px; margin: 0 auto; padding: 32px 28px;">
         <h1 style="font-size: 22px; margin-bottom: 8px; letter-spacing: -0.5px;">Confirm device code</h1>
