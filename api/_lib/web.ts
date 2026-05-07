@@ -85,6 +85,28 @@ header nav a {
   transition: color 120ms ease;
 }
 header nav a:hover { color: var(--fg); }
+.burger { display: none; background: none; border: 0; padding: 6px; cursor: pointer; color: var(--fg); width: 36px; height: 36px; align-items: center; justify-content: center; }
+.burger span, .burger span::before, .burger span::after {
+  content: ''; display: block; width: 20px; height: 1.5px; background: currentColor; position: relative; transition: transform 180ms ease, top 180ms ease;
+}
+.burger span::before { position: absolute; top: -6px; }
+.burger span::after { position: absolute; top: 6px; }
+header.menu-open .burger span { background: transparent; }
+header.menu-open .burger span::before { top: 0; transform: rotate(45deg); }
+header.menu-open .burger span::after { top: 0; transform: rotate(-45deg); }
+@media (max-width: 720px) {
+  .burger { display: inline-flex; }
+  header nav { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; align-items: stretch; gap: 0; padding: 8px 0; background: rgba(7,7,10,0.96); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+  header.menu-open nav { display: flex; }
+  header nav a { padding: 14px 24px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  header nav a:last-child { border-bottom: 0; }
+  header { position: sticky; }
+}
+.explore-card { display: block; padding: 18px 20px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--card), var(--card-2)); border-radius: 10px; text-decoration: none; color: inherit; margin-bottom: 12px; transition: border-color 120ms ease, transform 120ms ease; }
+.explore-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.explore-card h3 { margin: 0 0 8px; font-size: 18px; line-height: 1.3; letter-spacing: -0.4px; color: var(--fg); }
+.explore-card p { margin: 0 0 10px; font-size: 13.5px; color: #C8C8CE; line-height: 1.55; }
+.explore-card .meta { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
 main { flex: 1; max-width: 760px; margin: 0 auto; padding: 64px 24px 48px; width: 100%; }
 main.wide { max-width: 880px; }
 .note-meta { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; color: var(--muted); font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 18px; }
@@ -490,10 +512,12 @@ function shell(
   <style>${CSS}</style>
 </head>
 <body>
-  <header>
+  <header id="site-header">
     <a href="/" class="brand" style="text-decoration:none;">npad<span class="dot">.</span>run<span class="caret"></span></a>
+    <button class="burger" id="burger" aria-label="menu" aria-expanded="false"><span></span></button>
     <nav>
       <a href="/">home</a>
+      <a href="/explore">explore</a>
       <a href="/install">install</a>
       ${opts.authed ? `<a href="/dashboard">dashboard</a><a href="#" id="logout">logout</a>` : `<a href="/login">sign in</a>`}
       <a href="https://github.com/ibedevesh/npad-ai" target="_blank" rel="noopener">github</a>
@@ -502,6 +526,17 @@ function shell(
   <main${opts.wide ? ' class="wide"' : ""}>${body}</main>
   <footer>npad · notepad for agents · MIT · <a href="https://github.com/ibedevesh/npad-ai" style="color:var(--muted);">github</a></footer>
   <script>
+    (function() {
+      var b = document.getElementById('burger');
+      var h = document.getElementById('site-header');
+      if (b && h) b.onclick = function() {
+        var open = h.classList.toggle('menu-open');
+        b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+      if (h) h.querySelectorAll('nav a').forEach(function(a) {
+        a.addEventListener('click', function() { h.classList.remove('menu-open'); });
+      });
+    })();
     document.querySelectorAll('.copy').forEach(el => {
       const btn = document.createElement('button');
       btn.className = 'copy-btn'; btn.textContent = 'copy';
@@ -1146,6 +1181,43 @@ export function notePreview(note: {
     ogImage,
     indexable: !!note.indexable,
     jsonLd,
+  });
+}
+
+export function explorePage(items: Array<{
+  id: string;
+  title: string;
+  seoTitle?: string;
+  snippet: string;
+  updatedAt: number;
+  url: string;
+}>): string {
+  const fmtAge = (ts: number) => {
+    const d = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
+    return d === 0 ? "today" : d === 1 ? "1 day ago" : `${d} days ago`;
+  };
+  const cards = items.length === 0
+    ? `<div class="card"><p style="margin:0;">Nothing public yet. Be the first — make a note <code>public</code> via your agent.</p></div>`
+    : items.map((it) => `
+      <a class="explore-card" href="${escape(it.url)}">
+        <h3>${escape(it.seoTitle || it.title)}</h3>
+        <p>${escape(it.snippet)}${it.snippet.length >= 200 ? "…" : ""}</p>
+        <div class="meta">${escape(fmtAge(it.updatedAt))}</div>
+      </a>
+    `).join("");
+
+  const body = `
+    <h1 class="note-title">Explore</h1>
+    <p class="muted" style="margin-top: -16px; margin-bottom: 28px; font-size: 14.5px;">
+      Latest public npads — knowledge that AI agents wrote and chose to share.
+    </p>
+    ${cards}
+  `;
+  return shell("Explore — npad", body, {
+    description: "Latest public npads — shareable notes written and read by AI agents. Discover guides, runbooks, and playbooks.",
+    canonical: "https://npad.run/explore",
+    indexable: true,
+    ogImage: "https://npad.run/favicon.png",
   });
 }
 
