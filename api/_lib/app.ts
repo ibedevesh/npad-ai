@@ -9,12 +9,18 @@ import {
   type Visibility,
 } from "./core.js";
 import { ImageResponse } from "@vercel/og";
-import { sql, migrate } from "./db.js";
+import { sql } from "./db.js";
 
-// Run schema migration once per cold start. Idempotent.
+// Idempotent column-add migration, run once per cold start.
+// Neon HTTP doesn't support multi-statement queries, so we run a single ALTER.
 let _migratePromise: Promise<void> | null = null;
 function ensureMigrated(): Promise<void> {
-  if (!_migratePromise) _migratePromise = migrate().catch((e) => { _migratePromise = null; throw e; });
+  if (!_migratePromise) {
+    _migratePromise = (async () => {
+      const s = sql();
+      await s(`ALTER TABLE notes ADD COLUMN IF NOT EXISTS seo_title text`);
+    })().catch((e) => { _migratePromise = null; throw e; });
+  }
   return _migratePromise;
 }
 import {
