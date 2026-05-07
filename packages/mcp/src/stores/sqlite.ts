@@ -19,7 +19,7 @@ interface Row {
   title: string;
   body: string;
   tags: string;
-  visibility: "private" | "unlisted" | "domain";
+  visibility: "private" | "unlisted" | "domain" | "public";
   created_at: number;
   updated_at: number;
 }

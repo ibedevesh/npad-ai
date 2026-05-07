@@ -45,9 +45,14 @@ const TOOLS = [
         tags: { type: "array", items: { type: "string" }, description: "Optional free-form tags" },
         visibility: {
           type: "string",
-          enum: ["private", "unlisted"],
+          enum: ["private", "unlisted", "public"],
           description:
-            "private (default, only you) or unlisted (anyone with the URL can read). Sharing requires hosted mode.",
+            "private (default, only you) · unlisted (anyone with the URL can read, not indexed by search engines) · public (indexable by Google, gets a clean SEO URL like /p/title-slug-id and a shareable OG image). Use 'public' only when the user explicitly wants the note discoverable on the web (blog post, public guide, launch announcement). Sharing requires hosted mode.",
+        },
+        seoTitle: {
+          type: "string",
+          description:
+            "Optional punchier headline used for the public URL slug, the <title> tag, and the OG share image. Falls back to `title` when omitted. Use this when promoting a note to 'public' or 'unlisted' so the share card and Google snippet read like a headline (keyword-rich, scroll-stopping, ≤80 chars), while keeping `title` as the original working title. Do NOT set unless the user is sharing publicly.",
         },
       },
       required: ["title", "body"],
@@ -109,9 +114,14 @@ const TOOLS = [
   {
     name: "note_update",
     description:
-      "Update an existing note's title, body, tags, or visibility. Use this to flip a note from 'private' to 'unlisted' (so it can be shared via URL), rename a note, replace its body, or change tags. Only fields you pass are changed; omitted fields are left as-is.\n\n" +
+      "Update an existing note's title, body, tags, visibility, or seoTitle. Use this to change visibility (private → unlisted → public), rename a note, replace its body, change tags, or set a punchier headline (seoTitle) for the public URL and OG share image. Only fields you pass are changed; omitted fields are left as-is.\n\n" +
+      "VISIBILITY TIERS:\n" +
+      "- private: only the owner can read.\n" +
+      "- unlisted: anyone with the URL can read, but search engines won't index it.\n" +
+      "- public: indexable by search engines, served at a clean URL (/p/title-slug-id), shows a shareable OG image card on Twitter/Slack/Discord. Use only when the user explicitly wants the note discoverable on the web.\n\n" +
       "RULES:\n" +
-      "- When changing visibility to 'unlisted', confirm with the user first: '<title> will become readable by anyone with the URL. Proceed?' Only call after they say yes.\n" +
+      "- When changing visibility to 'unlisted', confirm: '<title> will become readable by anyone with the URL. Proceed?' Only call after the user says yes.\n" +
+      "- When changing visibility to 'public', confirm: '<title> will be indexable by Google and shown publicly. Proceed?' Only call after the user says yes. Then offer 2–3 punchy seoTitle options for the share card and let the user pick one.\n" +
       "- For body replacement, prefer note_append for additive changes; use note_update only when the user explicitly wants to overwrite.\n" +
       "- Returns the updated note.",
     inputSchema: {
@@ -121,7 +131,12 @@ const TOOLS = [
         title: { type: "string" },
         body: { type: "string" },
         tags: { type: "array", items: { type: "string" } },
-        visibility: { type: "string", enum: ["private", "unlisted"] },
+        visibility: { type: "string", enum: ["private", "unlisted", "public"] },
+        seoTitle: {
+          type: "string",
+          description:
+            "Optional punchier headline used for the public URL slug, the <title> tag, and the OG share image. Pass an empty string to clear it. When promoting a note to 'public', SUGGEST 2–3 short keyword-rich seoTitle options to the user (e.g. 'How to find emails of GitHub repo stargazers') and let them pick. Don't set without confirmation.",
+        },
       },
       required: ["id"],
     },
@@ -160,7 +175,11 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
           title: String(a.title ?? ""),
           body: String(a.body ?? ""),
           tags: Array.isArray(a.tags) ? (a.tags as string[]) : undefined,
-          visibility: a.visibility === "unlisted" ? "unlisted" : "private",
+          visibility:
+            a.visibility === "unlisted" || a.visibility === "public"
+              ? (a.visibility as "unlisted" | "public")
+              : "private",
+          seoTitle: typeof a.seoTitle === "string" && a.seoTitle.trim() ? a.seoTitle.trim() : undefined,
         });
         return ok({
           id: note.id,
@@ -201,7 +220,11 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
           title: typeof a.title === "string" ? a.title : undefined,
           body: typeof a.body === "string" ? a.body : undefined,
           tags: Array.isArray(a.tags) ? (a.tags as string[]) : undefined,
-          visibility: a.visibility === "unlisted" || a.visibility === "private" ? a.visibility : undefined,
+          visibility:
+            a.visibility === "unlisted" || a.visibility === "private" || a.visibility === "public"
+              ? (a.visibility as "unlisted" | "private" | "public")
+              : undefined,
+          seoTitle: typeof a.seoTitle === "string" ? a.seoTitle : undefined,
         });
         if (!note) return err(`Note not found: ${a.id}`);
         return ok({ id: note.id, url: idToUrl(note.id, baseUrl), title: note.title, visibility: note.visibility, updatedAt: note.updatedAt });

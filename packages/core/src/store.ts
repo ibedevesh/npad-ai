@@ -6,6 +6,8 @@ export interface UpdateInput {
   body?: string;
   tags?: string[];
   visibility?: Visibility;
+  /** Optional punchier headline for SEO/share card. Pass empty string to clear. */
+  seoTitle?: string;
 }
 
 export interface ListInput {

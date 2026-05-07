@@ -47,6 +47,8 @@ CREATE INDEX IF NOT EXISTS notes_owner_idx ON notes(owner_id);
 CREATE INDEX IF NOT EXISTS notes_visibility_idx ON notes(visibility);
 CREATE INDEX IF NOT EXISTS notes_fts_idx ON notes
   USING gin(to_tsvector('english', title || ' ' || body));
+
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS seo_title text;
 `;
 
 export async function migrate() {

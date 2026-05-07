@@ -1,4 +1,6 @@
-export type Visibility = "private" | "unlisted" | "domain";
+export type Visibility = "private" | "unlisted" | "domain" | "public";
+
+
 
 export interface PublicUser {
   id: string;
@@ -14,6 +16,8 @@ export interface Note {
   body: string;
   tags: string[];
   visibility: Visibility;
+  /** Optional punchier headline used for SEO and the OG share card. */
+  seoTitle?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -31,6 +35,7 @@ export interface WriteInput {
   body: string;
   tags?: string[];
   visibility?: Visibility;
+  seoTitle?: string;
 }
 
 export interface AppendInput {
