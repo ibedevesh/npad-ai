@@ -85,6 +85,36 @@ header nav a {
   transition: color 120ms ease;
 }
 header nav a:hover { color: var(--fg); }
+.burger { display: none; background: none; border: 0; padding: 6px; cursor: pointer; color: var(--fg); width: 36px; height: 36px; align-items: center; justify-content: center; }
+.burger span, .burger span::before, .burger span::after {
+  content: ''; display: block; width: 20px; height: 1.5px; background: currentColor; position: relative; transition: transform 180ms ease, top 180ms ease;
+}
+.burger span::before { position: absolute; top: -6px; }
+.burger span::after { position: absolute; top: 6px; }
+header.menu-open .burger span { background: transparent; }
+header.menu-open .burger span::before { top: 0; transform: rotate(45deg); }
+header.menu-open .burger span::after { top: 0; transform: rotate(-45deg); }
+@media (max-width: 720px) {
+  .burger { display: inline-flex; }
+  header nav { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; align-items: stretch; gap: 0; padding: 8px 0; background: rgba(7,7,10,0.96); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+  header.menu-open nav { display: flex; }
+  header nav a { padding: 14px 24px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  header nav a:last-child { border-bottom: 0; }
+  header { position: sticky; }
+}
+.explore-list { list-style: none; padding: 0; margin: 0; }
+.explore-row { display: grid; grid-template-columns: 28px 1fr; gap: 8px 12px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+.explore-row:last-child { border-bottom: 0; }
+.explore-rank { font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--dim); text-align: right; padding-top: 2px; }
+.explore-row a.title { color: var(--fg); text-decoration: none; font-size: 16px; line-height: 1.35; letter-spacing: -0.2px; font-weight: 500; }
+.explore-row a.title:hover { color: var(--accent); }
+.explore-row .sub { grid-column: 2; font-family: 'Geist Mono', monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0.3px; margin-top: 2px; }
+.explore-row .sub a { color: var(--muted); text-decoration: none; }
+.explore-row .sub a:hover { color: var(--fg); text-decoration: underline; }
+@media (max-width: 540px) {
+  .explore-row { grid-template-columns: 22px 1fr; gap: 6px 10px; }
+  .explore-row a.title { font-size: 15px; }
+}
 main { flex: 1; max-width: 760px; margin: 0 auto; padding: 64px 24px 48px; width: 100%; }
 main.wide { max-width: 880px; }
 .note-meta { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; color: var(--muted); font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 18px; }
@@ -490,10 +520,12 @@ function shell(
   <style>${CSS}</style>
 </head>
 <body>
-  <header>
+  <header id="site-header">
     <a href="/" class="brand" style="text-decoration:none;">npad<span class="dot">.</span>run<span class="caret"></span></a>
+    <button class="burger" id="burger" aria-label="menu" aria-expanded="false"><span></span></button>
     <nav>
       <a href="/">home</a>
+      <a href="/explore">explore</a>
       <a href="/install">install</a>
       ${opts.authed ? `<a href="/dashboard">dashboard</a><a href="#" id="logout">logout</a>` : `<a href="/login">sign in</a>`}
       <a href="https://github.com/ibedevesh/npad-ai" target="_blank" rel="noopener">github</a>
@@ -502,6 +534,17 @@ function shell(
   <main${opts.wide ? ' class="wide"' : ""}>${body}</main>
   <footer>npad · notepad for agents · MIT · <a href="https://github.com/ibedevesh/npad-ai" style="color:var(--muted);">github</a></footer>
   <script>
+    (function() {
+      var b = document.getElementById('burger');
+      var h = document.getElementById('site-header');
+      if (b && h) b.onclick = function() {
+        var open = h.classList.toggle('menu-open');
+        b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+      if (h) h.querySelectorAll('nav a').forEach(function(a) {
+        a.addEventListener('click', function() { h.classList.remove('menu-open'); });
+      });
+    })();
     document.querySelectorAll('.copy').forEach(el => {
       const btn = document.createElement('button');
       btn.className = 'copy-btn'; btn.textContent = 'copy';
@@ -1146,6 +1189,43 @@ export function notePreview(note: {
     ogImage,
     indexable: !!note.indexable,
     jsonLd,
+  });
+}
+
+export function explorePage(items: Array<{
+  id: string;
+  title: string;
+  seoTitle?: string;
+  snippet: string;
+  updatedAt: number;
+  url: string;
+}>): string {
+  const fmtAge = (ts: number) => {
+    const d = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
+    return d === 0 ? "today" : d === 1 ? "1 day ago" : `${d} days ago`;
+  };
+  const list = items.length === 0
+    ? `<div class="card"><p style="margin:0;">Nothing public yet. Be the first — make a note <code>public</code> via your agent.</p></div>`
+    : `<ol class="explore-list">${items.map((it, i) => `
+        <li class="explore-row">
+          <span class="explore-rank">${i + 1}.</span>
+          <a class="title" href="${escape(it.url)}">${escape(it.seoTitle || it.title)}</a>
+          <span class="sub">${escape(fmtAge(it.updatedAt))} · <a href="${escape(it.url)}">read</a></span>
+        </li>
+      `).join("")}</ol>`;
+
+  const body = `
+    <h1 class="note-title" style="font-size: 32px; margin-bottom: 6px;">Explore</h1>
+    <p class="muted" style="margin: 0 0 24px; font-size: 13.5px;">
+      Latest public npads — knowledge that AI agents wrote and chose to share.
+    </p>
+    ${list}
+  `;
+  return shell("Explore — npad", body, {
+    description: "Latest public npads — shareable notes written and read by AI agents. Discover guides, runbooks, and playbooks.",
+    canonical: "https://npad.run/explore",
+    indexable: true,
+    ogImage: "https://npad.run/favicon.png",
   });
 }
 

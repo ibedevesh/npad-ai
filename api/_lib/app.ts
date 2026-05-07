@@ -31,7 +31,7 @@ import {
   verifyIdToken,
   type DbUser,
 } from "./auth.js";
-import { landing, login, dashboard, notePreview, notFound, deviceLinkPage, installPage } from "./web.js";
+import { landing, login, dashboard, notePreview, notFound, deviceLinkPage, installPage, explorePage } from "./web.js";
 import { FAVICON_PNG_B64 } from "./favicon.js";
 
 type Row = {
@@ -153,12 +153,40 @@ app.get("/p/:slugAndId", async (c) => {
   );
 });
 
-// robots.txt — let crawlers find /p/, keep /n/ private-by-link.
+// Public discovery — latest public notes. Indexable.
+app.get("/explore", async (c) => {
+  const s = sql();
+  const rows = (await s`
+    SELECT id, title, body, seo_title, updated_at
+    FROM notes
+    WHERE visibility = 'public'
+    ORDER BY updated_at DESC
+    LIMIT 50
+  `) as Array<{
+    id: string;
+    title: string;
+    body: string;
+    seo_title: string | null;
+    updated_at: number;
+  }>;
+  const items = rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    seoTitle: r.seo_title || undefined,
+    snippet: r.body.replace(/\s+/g, " ").trim().slice(0, 200),
+    updatedAt: Number(r.updated_at),
+    url: `https://npad.run/p/${slugify(r.seo_title || r.title)}-${r.id}`,
+  }));
+  return c.html(explorePage(items));
+});
+
+// robots.txt — let crawlers find /p/ and /explore, keep /n/ private-by-link.
 app.get("/robots.txt", (c) => {
   const body = [
     "User-agent: *",
     "Allow: /",
     "Allow: /p/",
+    "Allow: /explore",
     "Disallow: /n/",
     "Disallow: /dashboard",
     "Disallow: /api/",
@@ -180,6 +208,7 @@ app.get("/sitemap.xml", async (c) => {
   }>;
   const urls = [
     `<url><loc>https://npad.run/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>https://npad.run/explore</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
     `<url><loc>https://npad.run/install</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>`,
   ];
   for (const r of rows) {
