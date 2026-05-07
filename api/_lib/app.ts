@@ -9,7 +9,14 @@ import {
   type Visibility,
 } from "./core.js";
 import { ImageResponse } from "@vercel/og";
-import { sql } from "./db.js";
+import { sql, migrate } from "./db.js";
+
+// Run schema migration once per cold start. Idempotent.
+let _migratePromise: Promise<void> | null = null;
+function ensureMigrated(): Promise<void> {
+  if (!_migratePromise) _migratePromise = migrate().catch((e) => { _migratePromise = null; throw e; });
+  return _migratePromise;
+}
 import {
   bearerFromRequest,
   issueApiKey,
@@ -57,6 +64,11 @@ async function requireUser(req: Request): Promise<DbUser | null> {
 }
 
 export const app = new Hono();
+
+app.use("*", async (c, next) => {
+  await ensureMigrated();
+  await next();
+});
 
 app.get("/", (c) => c.html(landing()));
 app.get("/install", (c) => c.html(installPage()));
