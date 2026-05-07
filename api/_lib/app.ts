@@ -2,10 +2,13 @@ import { Hono } from "hono";
 import {
   newId,
   parseId,
+  parseSlugId,
+  slugify,
   type Note,
   type SearchHit,
   type Visibility,
 } from "./core.js";
+import { ImageResponse } from "@vercel/og";
 import { sql } from "./db.js";
 import {
   bearerFromRequest,
@@ -25,6 +28,7 @@ type Row = {
   body: string;
   tags: string[];
   visibility: Visibility;
+  seo_title: string | null;
   created_at: string | number;
   updated_at: string | number;
 };
@@ -36,13 +40,14 @@ function rowToNote(r: Row): Note {
     body: r.body,
     tags: Array.isArray(r.tags) ? r.tags : [],
     visibility: r.visibility,
+    seoTitle: r.seo_title || undefined,
     createdAt: Number(r.created_at),
     updatedAt: Number(r.updated_at),
   };
 }
 
 function isVisibility(v: unknown): v is Visibility {
-  return v === "private" || v === "unlisted" || v === "domain";
+  return v === "private" || v === "unlisted" || v === "domain" || v === "public";
 }
 
 async function requireUser(req: Request): Promise<DbUser | null> {
@@ -71,23 +76,203 @@ app.get("/n/:id/view", async (c) => {
   const id = parseId(c.req.param("id"));
   if (!id) return c.html(notFound(), 404);
   const s = sql();
-  const rows = (await s`SELECT id, title, body, visibility, updated_at FROM notes WHERE id = ${id}`) as Array<{
+  const rows = (await s`SELECT id, title, body, visibility, seo_title, updated_at FROM notes WHERE id = ${id}`) as Array<{
     id: string;
     title: string;
     body: string;
     visibility: Visibility;
+    seo_title: string | null;
     updated_at: number;
   }>;
   const row = rows[0];
   if (!row || row.visibility === "private") return c.html(notFound(), 404);
+  const slugSource = row.seo_title || row.title;
+  const canonical = row.visibility === "public"
+    ? `https://npad.run/p/${slugify(slugSource)}-${row.id}`
+    : undefined;
   return c.html(
     notePreview({
       id: row.id,
       title: row.title,
       body: row.body,
       visibility: row.visibility,
+      seoTitle: row.seo_title || undefined,
       updatedAt: Number(row.updated_at),
+      canonical,
+      indexable: false,
     }),
+  );
+});
+
+// Public, indexable URL: /p/{slug}-{id}. Slug is decorative; id is the source of truth.
+app.get("/p/:slugAndId", async (c) => {
+  const id = parseSlugId(c.req.param("slugAndId"));
+  if (!id) return c.html(notFound(), 404);
+  const s = sql();
+  const rows = (await s`SELECT id, title, body, visibility, seo_title, updated_at FROM notes WHERE id = ${id}`) as Array<{
+    id: string;
+    title: string;
+    body: string;
+    visibility: Visibility;
+    seo_title: string | null;
+    updated_at: number;
+  }>;
+  const row = rows[0];
+  if (!row || row.visibility !== "public") return c.html(notFound(), 404);
+  const slugSource = row.seo_title || row.title;
+  const canonical = `https://npad.run/p/${slugify(slugSource)}-${row.id}`;
+  return c.html(
+    notePreview({
+      id: row.id,
+      title: row.title,
+      body: row.body,
+      visibility: row.visibility,
+      seoTitle: row.seo_title || undefined,
+      updatedAt: Number(row.updated_at),
+      canonical,
+      indexable: true,
+    }),
+  );
+});
+
+// robots.txt — let crawlers find /p/, keep /n/ private-by-link.
+app.get("/robots.txt", (c) => {
+  const body = [
+    "User-agent: *",
+    "Allow: /",
+    "Allow: /p/",
+    "Disallow: /n/",
+    "Disallow: /dashboard",
+    "Disallow: /api/",
+    "",
+    "Sitemap: https://npad.run/sitemap.xml",
+    "",
+  ].join("\n");
+  return c.text(body, 200, { "cache-control": "public, max-age=3600" });
+});
+
+// sitemap — only public notes are indexable.
+app.get("/sitemap.xml", async (c) => {
+  const s = sql();
+  const rows = (await s`SELECT id, title, seo_title, updated_at FROM notes WHERE visibility = 'public' ORDER BY updated_at DESC LIMIT 5000`) as Array<{
+    id: string;
+    title: string;
+    seo_title: string | null;
+    updated_at: number;
+  }>;
+  const urls = [
+    `<url><loc>https://npad.run/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>https://npad.run/install</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>`,
+  ];
+  for (const r of rows) {
+    const loc = `https://npad.run/p/${slugify(r.seo_title || r.title)}-${r.id}`;
+    const lastmod = new Date(Number(r.updated_at)).toISOString();
+    urls.push(`<url><loc>${loc}</loc><lastmod>${lastmod}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`);
+  }
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
+    urls.join("") +
+    `</urlset>`;
+  return new Response(xml, {
+    headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=3600" },
+  });
+});
+
+// Dynamic OG image for shareable cards (Twitter/X, Slack, Discord, LinkedIn).
+app.get("/n/:id/og.png", async (c) => {
+  const id = parseId(c.req.param("id"));
+  if (!id) return c.text("not found", 404);
+  const s = sql();
+  const rows = (await s`SELECT title, seo_title, visibility FROM notes WHERE id = ${id}`) as Array<{
+    title: string;
+    seo_title: string | null;
+    visibility: Visibility;
+  }>;
+  const row = rows[0];
+  if (!row || row.visibility === "private") return c.text("not found", 404);
+
+  const headline = row.seo_title || row.title;
+  // Hard cap so the title can't blow out the layout, regardless of font size.
+  const title = headline.length > 140 ? headline.slice(0, 137) + "…" : headline;
+  // Scale font down as the title grows so long titles stay on 2–3 lines.
+  const titleFontSize =
+    title.length <= 40 ? 84 :
+    title.length <= 70 ? 68 :
+    title.length <= 100 ? 56 : 46;
+  const badge = row.visibility === "public" ? "public note" : "shared note";
+
+  return new ImageResponse(
+    {
+      type: "div",
+      props: {
+        style: {
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "72px",
+          background: "linear-gradient(135deg, #0b0b0d 0%, #16161a 100%)",
+          color: "#f5f5f5",
+          fontFamily: "system-ui, sans-serif",
+        },
+        children: [
+          {
+            type: "div",
+            props: {
+              style: { display: "flex", alignItems: "center", fontSize: 32, color: "#9ca3af", letterSpacing: "-0.5px" },
+              children: [
+                { type: "span", props: { style: { color: "#10b981", marginRight: 12 }, children: "●" } },
+                { type: "span", props: { children: badge } },
+              ],
+            },
+          },
+          {
+            type: "div",
+            props: {
+              style: {
+                fontSize: titleFontSize,
+                fontWeight: 700,
+                lineHeight: 1.15,
+                letterSpacing: "-2px",
+                color: "#ffffff",
+                display: "-webkit-box",
+                WebkitLineClamp: 4,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              },
+              children: title,
+            },
+          },
+          {
+            type: "div",
+            props: {
+              style: { display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 28, color: "#9ca3af" },
+              children: [
+                {
+                  type: "div",
+                  props: {
+                    style: { display: "flex", alignItems: "center" },
+                    children: [
+                      { type: "span", props: { style: { color: "#ffffff", fontWeight: 700 }, children: "npad" } },
+                      { type: "span", props: { style: { color: "#10b981" }, children: "." } },
+                      { type: "span", props: { style: { color: "#ffffff", fontWeight: 700 }, children: "run" } },
+                    ],
+                  },
+                },
+                { type: "span", props: { children: "a notepad your agents share" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      width: 1200,
+      height: 630,
+      headers: { "cache-control": "public, max-age=3600, s-maxage=86400" },
+    },
   );
 });
 
@@ -252,12 +437,13 @@ app.post("/n", async (c) => {
   const now = Date.now();
   const tags: string[] = Array.isArray(body.tags) ? body.tags : [];
   const visibility: Visibility = isVisibility(body.visibility) ? body.visibility : "private";
+  const seoTitle: string | null = typeof body.seoTitle === "string" && body.seoTitle.trim() ? body.seoTitle.trim().slice(0, 200) : null;
 
   const s = sql();
   await s`
-    INSERT INTO notes (id, owner_id, title, body, tags, visibility, created_at, updated_at)
+    INSERT INTO notes (id, owner_id, title, body, tags, visibility, seo_title, created_at, updated_at)
     VALUES (${id}, ${user.id}, ${body.title}, ${body.body}, ${JSON.stringify(tags)}::jsonb,
-            ${visibility}, ${now}, ${now})
+            ${visibility}, ${seoTitle}, ${now}, ${now})
   `;
 
   return c.json<Note>({
@@ -266,6 +452,7 @@ app.post("/n", async (c) => {
     body: body.body,
     tags,
     visibility,
+    seoTitle: seoTitle || undefined,
     createdAt: now,
     updatedAt: now,
   });
@@ -283,13 +470,19 @@ app.get("/n/:id", async (c) => {
   const wantsHtml = accept.includes("text/html") && /Mozilla\//.test(ua);
   if (wantsHtml) {
     const s2 = sql();
-    const rs = (await s2`SELECT id, title, body, visibility, updated_at FROM notes WHERE id = ${id}`) as Array<{
-      id: string; title: string; body: string; visibility: Visibility; updated_at: number;
+    const rs = (await s2`SELECT id, title, body, visibility, seo_title, updated_at FROM notes WHERE id = ${id}`) as Array<{
+      id: string; title: string; body: string; visibility: Visibility; seo_title: string | null; updated_at: number;
     }>;
     const r = rs[0];
     if (!r || r.visibility === "private") return c.html(notFound(), 404);
+    const canonical = r.visibility === "public"
+      ? `https://npad.run/p/${slugify(r.seo_title || r.title)}-${r.id}`
+      : undefined;
     return c.html(notePreview({
-      id: r.id, title: r.title, body: r.body, visibility: r.visibility, updatedAt: Number(r.updated_at),
+      id: r.id, title: r.title, body: r.body, visibility: r.visibility,
+      seoTitle: r.seo_title || undefined,
+      updatedAt: Number(r.updated_at),
+      canonical, indexable: false,
     }));
   }
 
@@ -430,13 +623,22 @@ app.put("/n/:id", async (c) => {
   const newBody = typeof body.body === "string" ? body.body : row.body;
   const newTags = Array.isArray(body.tags) ? body.tags : Array.isArray(row.tags) ? row.tags : [];
   const newVis: Visibility = isVisibility(body.visibility) ? body.visibility : row.visibility;
+  // Pass seoTitle: undefined to leave unchanged; pass "" or null to clear; pass a string to set.
+  let newSeoTitle: string | null = row.seo_title ?? null;
+  if (Object.prototype.hasOwnProperty.call(body, "seoTitle")) {
+    if (typeof body.seoTitle === "string" && body.seoTitle.trim()) {
+      newSeoTitle = body.seoTitle.trim().slice(0, 200);
+    } else {
+      newSeoTitle = null;
+    }
+  }
   await s`
     UPDATE notes
     SET title = ${newTitle}, body = ${newBody}, tags = ${JSON.stringify(newTags)}::jsonb,
-        visibility = ${newVis}, updated_at = ${now}
+        visibility = ${newVis}, seo_title = ${newSeoTitle}, updated_at = ${now}
     WHERE id = ${id}
   `;
-  return c.json(rowToNote({ ...row, title: newTitle, body: newBody, tags: newTags, visibility: newVis, updated_at: now }));
+  return c.json(rowToNote({ ...row, title: newTitle, body: newBody, tags: newTags, visibility: newVis, seo_title: newSeoTitle, updated_at: now }));
 });
 
 // List

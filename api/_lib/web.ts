@@ -445,14 +445,48 @@ function renderMarkdown(src: string): string {
   return out.join("\n");
 }
 
-function shell(title: string, body: string, opts: { authed?: boolean; wide?: boolean } = {}): string {
+function shell(
+  title: string,
+  body: string,
+  opts: {
+    authed?: boolean;
+    wide?: boolean;
+    description?: string;
+    canonical?: string;
+    ogImage?: string;
+    indexable?: boolean;
+    jsonLd?: string;
+  } = {},
+): string {
+  const desc = opts.description || "npad — a notepad your AI agents read and write to. Share context across Claude, Codex, Cursor and your team.";
+  const ogImage = opts.ogImage || "https://npad.run/favicon.png";
+  const canonicalTag = opts.canonical ? `<link rel="canonical" href="${escape(opts.canonical)}" />` : "";
+  const robotsTag = opts.indexable ? "" : `<meta name="robots" content="noindex,nofollow" />`;
+  const jsonLdTag = opts.jsonLd ? `<script type="application/ld+json">${opts.jsonLd}</script>` : "";
+  const pageUrl = opts.canonical || "https://npad.run/";
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escape(title)} · npad</title>
+  <meta name="description" content="${escape(desc)}" />
+  ${robotsTag}
+  ${canonicalTag}
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="${escape(title)}" />
+  <meta property="og:description" content="${escape(desc)}" />
+  <meta property="og:url" content="${escape(pageUrl)}" />
+  <meta property="og:image" content="${escape(ogImage)}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="npad" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${escape(title)}" />
+  <meta name="twitter:description" content="${escape(desc)}" />
+  <meta name="twitter:image" content="${escape(ogImage)}" />
   <link rel="icon" type="image/png" href="/favicon.png" />
+  ${jsonLdTag}
   <style>${CSS}</style>
 </head>
 <body>
@@ -1007,13 +1041,44 @@ export function dashboard(): string {
   return shell("Dashboard", body, { authed: true });
 }
 
-export function notePreview(note: { id: string; title: string; visibility: string; updatedAt: number; body?: string | null }): string {
-  const visBadge = note.visibility === "domain" ? "company" : "unlisted";
+export function notePreview(note: {
+  id: string;
+  title: string;
+  visibility: string;
+  updatedAt: number;
+  body?: string | null;
+  canonical?: string;
+  indexable?: boolean;
+  seoTitle?: string;
+}): string {
+  const visBadge =
+    note.visibility === "domain" ? "company" :
+    note.visibility === "public" ? "public" : "unlisted";
+  // SEO/share headline: punchy, marketing-friendly. Falls back to the working title.
+  const headline = note.seoTitle || note.title;
   const ageDays = Math.floor((Date.now() - note.updatedAt) / (1000 * 60 * 60 * 24));
   const ageStr = ageDays === 0 ? "today" : ageDays === 1 ? "1 day ago" : `${ageDays} days ago`;
   const hasBody = note.visibility !== "private" && typeof note.body === "string" && note.body.length > 0;
-  const shareUrl = `https://npad.run/n/${note.id}`;
+  const shareUrl = note.canonical || `https://npad.run/n/${note.id}`;
   const charCount = hasBody ? note.body!.length : 0;
+  const description = hasBody
+    ? (note.body!.replace(/\s+/g, " ").trim().slice(0, 200))
+    : `${note.title} — shared on npad.`;
+  const ogImage = `https://npad.run/n/${note.id}/og.png`;
+  const jsonLd = note.indexable
+    ? JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline,
+        description,
+        url: shareUrl,
+        datePublished: new Date(note.updatedAt).toISOString(),
+        dateModified: new Date(note.updatedAt).toISOString(),
+        image: ogImage,
+        author: { "@type": "Organization", name: "npad" },
+        publisher: { "@type": "Organization", name: "npad", url: "https://npad.run" },
+      }).replace(/</g, "\\u003c")
+    : undefined;
 
   const bodyBlock = hasBody
     ? `
@@ -1074,7 +1139,14 @@ export function notePreview(note: { id: string; title: string; visibility: strin
       })();
     </script>
   `;
-  return shell(note.title, body, { wide: true });
+  return shell(headline, body, {
+    wide: true,
+    description,
+    canonical: note.canonical,
+    ogImage,
+    indexable: !!note.indexable,
+    jsonLd,
+  });
 }
 
 export function notFound(): string {
