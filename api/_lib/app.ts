@@ -19,6 +19,19 @@ function ensureMigrated(): Promise<void> {
     _migratePromise = (async () => {
       const s = sql();
       await s(`ALTER TABLE notes ADD COLUMN IF NOT EXISTS seo_title text`);
+      await s(`CREATE TABLE IF NOT EXISTS note_hits (
+        id bigserial PRIMARY KEY,
+        note_id text NOT NULL,
+        surface text NOT NULL,
+        ua text NOT NULL DEFAULT '',
+        ua_category text NOT NULL DEFAULT 'unknown',
+        referer text NOT NULL DEFAULT '',
+        ip text NOT NULL DEFAULT '',
+        created_at bigint NOT NULL
+      )`);
+      await s(`CREATE INDEX IF NOT EXISTS note_hits_note_idx ON note_hits(note_id)`);
+      await s(`CREATE INDEX IF NOT EXISTS note_hits_category_idx ON note_hits(ua_category)`);
+      await s(`CREATE INDEX IF NOT EXISTS note_hits_created_idx ON note_hits(created_at DESC)`);
     })().catch((e) => { _migratePromise = null; throw e; });
   }
   return _migratePromise;
@@ -32,6 +45,7 @@ import {
   type DbUser,
 } from "./auth.js";
 import { landing, login, dashboard, notePreview, notFound, deviceLinkPage, installPage, explorePage } from "./web.js";
+import { recordHit, clientIp } from "./hits.js";
 import { FAVICON_PNG_B64 } from "./favicon.js";
 
 type Row = {
@@ -137,6 +151,13 @@ app.get("/p/:slugAndId", async (c) => {
   }>;
   const row = rows[0];
   if (!row || row.visibility !== "public") return c.html(notFound(), 404);
+  recordHit({
+    surface: "p",
+    noteId: row.id,
+    ua: c.req.header("user-agent") ?? "",
+    referer: c.req.header("referer") ?? "",
+    ip: clientIp(c.req.raw.headers),
+  });
   const slugSource = row.seo_title || row.title;
   const canonical = `https://npad.run/p/${slugify(slugSource)}-${row.id}`;
   return c.html(
@@ -522,6 +543,13 @@ app.get("/n/:id", async (c) => {
     }>;
     const r = rs[0];
     if (!r || r.visibility === "private") return c.html(notFound(), 404);
+    recordHit({
+      surface: "n",
+      noteId: r.id,
+      ua,
+      referer: c.req.header("referer") ?? "",
+      ip: clientIp(c.req.raw.headers),
+    });
     const canonical = r.visibility === "public"
       ? `https://npad.run/p/${slugify(r.seo_title || r.title)}-${r.id}`
       : undefined;
@@ -552,6 +580,15 @@ app.get("/n/:id", async (c) => {
         return c.json({ error: "not found" }, 404);
       }
     }
+  }
+  if (row.visibility === "unlisted" || row.visibility === "public") {
+    recordHit({
+      surface: "n",
+      noteId: row.id,
+      ua,
+      referer: c.req.header("referer") ?? "",
+      ip: clientIp(c.req.raw.headers),
+    });
   }
   // unlisted = anyone with the URL can read (like a Gist or Loom link). No auth needed.
   // For anonymous reads we PREPEND a clear "How you got this" section so any agent
@@ -798,4 +835,99 @@ app.delete("/n/:id", async (c) => {
   const result = (await s`DELETE FROM notes WHERE id = ${id} AND owner_id = ${user.id} RETURNING id`) as Array<{ id: string }>;
   if (result.length === 0) return c.json({ error: "not found" }, 404);
   return c.json({ ok: true });
+});
+
+// Admin: who is fetching our links? Gated by ADMIN_EMAIL env + bearer API key.
+// Renders an HTML dashboard (visit in a browser with ?key=<api-key>) and also
+// supports JSON via Accept: application/json.
+app.get("/admin/hits", async (c) => {
+  const adminEmail = (process.env.ADMIN_EMAIL ?? "").toLowerCase();
+  if (!adminEmail) return c.json({ error: "admin not configured" }, 503);
+
+  const keyParam = c.req.query("key");
+  const tok = bearerFromRequest(c.req.raw) ?? keyParam ?? "";
+  const user = tok ? await userFromApiKey(tok) : null;
+  if (!user || user.email.toLowerCase() !== adminEmail) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+
+  const sinceDays = Math.max(1, Math.min(90, Number(c.req.query("days") ?? 7)));
+  const since = Date.now() - sinceDays * 86400_000;
+  const s = sql();
+
+  const totals = (await s`
+    SELECT ua_category, COUNT(*)::int AS n
+    FROM note_hits
+    WHERE created_at >= ${since}
+    GROUP BY ua_category
+    ORDER BY n DESC
+  `) as Array<{ ua_category: string; n: number }>;
+
+  const topNotes = (await s`
+    SELECT note_id, COUNT(*)::int AS n
+    FROM note_hits
+    WHERE created_at >= ${since}
+    GROUP BY note_id
+    ORDER BY n DESC
+    LIMIT 25
+  `) as Array<{ note_id: string; n: number }>;
+
+  const recent = (await s`
+    SELECT note_id, surface, ua, ua_category, referer, created_at
+    FROM note_hits
+    WHERE created_at >= ${since}
+    ORDER BY created_at DESC
+    LIMIT 200
+  `) as Array<{
+    note_id: string; surface: string; ua: string; ua_category: string;
+    referer: string; created_at: number;
+  }>;
+
+  if ((c.req.header("accept") ?? "").includes("application/json")) {
+    return c.json({ sinceDays, totals, topNotes, recent });
+  }
+
+  const esc = (x: string) =>
+    x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const totalAll = totals.reduce((a, b) => a + b.n, 0);
+  const totalsRows = totals.map((t) =>
+    `<tr><td>${esc(t.ua_category)}</td><td>${t.n}</td><td>${totalAll ? ((t.n / totalAll) * 100).toFixed(1) : "0"}%</td></tr>`
+  ).join("");
+  const topRows = topNotes.map((t) =>
+    `<tr><td><a href="/n/${esc(t.note_id)}">${esc(t.note_id)}</a></td><td>${t.n}</td></tr>`
+  ).join("");
+  const recentRows = recent.map((r) => {
+    const when = new Date(Number(r.created_at)).toISOString().replace("T", " ").slice(0, 19);
+    return `<tr><td>${when}</td><td>${esc(r.ua_category)}</td><td>/${esc(r.surface)}/${esc(r.note_id)}</td><td title="${esc(r.ua)}">${esc(r.ua.slice(0, 80))}</td><td>${esc(r.referer.slice(0, 60))}</td></tr>`;
+  }).join("");
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>npad — link hits</title>
+<style>
+  body{font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:24px;max-width:1100px;color:#111}
+  h1{font-size:20px;margin:0 0 4px}
+  h2{font-size:15px;margin:24px 0 8px;color:#444}
+  table{border-collapse:collapse;width:100%;margin-top:8px;font-size:13px}
+  th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #eee;vertical-align:top}
+  th{background:#fafafa;font-weight:600}
+  td:nth-child(2){white-space:nowrap}
+  a{color:#0366d6;text-decoration:none}
+  .muted{color:#888}
+  form{margin-top:8px}
+</style></head><body>
+<h1>Link hits</h1>
+<div class="muted">Last ${sinceDays} day(s) — ${totalAll} total hits</div>
+<form method="get"><label>Days: <input name="days" value="${sinceDays}" size="3"></label>
+${keyParam ? `<input type="hidden" name="key" value="${esc(keyParam)}">` : ""}
+<button>Refresh</button></form>
+
+<h2>By agent</h2>
+<table><thead><tr><th>Agent</th><th>Hits</th><th>Share</th></tr></thead><tbody>${totalsRows || "<tr><td colspan=3 class=muted>no hits yet</td></tr>"}</tbody></table>
+
+<h2>Top notes</h2>
+<table><thead><tr><th>Note</th><th>Hits</th></tr></thead><tbody>${topRows || "<tr><td colspan=2 class=muted>no hits yet</td></tr>"}</tbody></table>
+
+<h2>Recent (200)</h2>
+<table><thead><tr><th>When (UTC)</th><th>Agent</th><th>URL</th><th>UA</th><th>Referer</th></tr></thead><tbody>${recentRows || "<tr><td colspan=5 class=muted>no hits yet</td></tr>"}</tbody></table>
+</body></html>`;
+  return c.html(html);
 });
