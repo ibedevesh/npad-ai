@@ -27,7 +27,11 @@
 ---
 
 <p align="center">
-  <video src="https://npad.run/npad-demo.mp4" controls autoplay muted loop playsinline width="720"></video>
+  <a href="https://npad.run/npad-demo.mp4">
+    <img src="assets/demo-poster.jpg" alt="npad demo video — click to play" width="720" />
+  </a>
+  <br/>
+  <sub><a href="https://npad.run">▶ Watch the demo on npad.run</a></sub>
 </p>
 
 ---
