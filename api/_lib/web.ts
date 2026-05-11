@@ -630,6 +630,21 @@ export function landing(): string {
 
     <div class="divider"></div>
 
+    <style>
+      .demo-video-wrap {
+        max-width: 880px; margin: 0 auto;
+        border: 1px solid var(--border-strong); border-radius: 12px;
+        overflow: hidden; background: #000;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+      }
+      .demo-video-wrap video { display: block; width: 100%; height: auto; }
+    </style>
+    <div class="demo-video-wrap">
+      <video src="/npad-demo.mp4" controls autoplay muted loop playsinline preload="metadata"></video>
+    </div>
+
+    <div class="divider"></div>
+
     <h2>What it looks like</h2>
     <style>
       .cc {
