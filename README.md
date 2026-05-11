@@ -26,6 +26,12 @@
 
 ---
 
+<p align="center">
+  <video src="https://npad.run/npad-demo.mp4" controls autoplay muted loop playsinline width="720"></video>
+</p>
+
+---
+
 ## Quickstart
 
 ```bash
