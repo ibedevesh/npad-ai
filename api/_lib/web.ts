@@ -631,16 +631,62 @@ export function landing(): string {
     <div class="divider"></div>
 
     <style>
-      .demo-video-wrap {
-        max-width: 880px; margin: 0 auto;
-        border: 1px solid var(--border-strong); border-radius: 12px;
-        overflow: hidden; background: #000;
-        box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+      .demo-video-section { position: relative; margin: 8px 0; }
+      .demo-video-section .eyebrow {
+        text-align: center; font-family: 'Geist Mono', monospace; font-size: 11px;
+        color: var(--accent); text-transform: uppercase; letter-spacing: 2px;
+        margin-bottom: 14px;
       }
+      .demo-video-stage {
+        position: relative; max-width: 960px; margin: 0 auto;
+        padding: 1px; border-radius: 16px;
+        background: linear-gradient(135deg, rgba(245,165,36,0.45), rgba(245,165,36,0.05) 40%, rgba(245,165,36,0.35));
+      }
+      .demo-video-stage::before {
+        content: ''; position: absolute; inset: -40px; z-index: -1;
+        background: radial-gradient(60% 50% at 50% 50%, rgba(245,165,36,0.18), transparent 70%);
+        filter: blur(20px); pointer-events: none;
+      }
+      .demo-video-wrap {
+        position: relative; border-radius: 15px; overflow: hidden;
+        background: #000; box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02) inset;
+      }
+      .demo-video-chrome {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 14px; background: #07070A; border-bottom: 1px solid var(--border);
+        font-family: 'Geist Mono', monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0.4px;
+      }
+      .demo-video-chrome .traffic { display: flex; gap: 6px; margin-right: 4px; }
+      .demo-video-chrome .traffic span { width: 11px; height: 11px; border-radius: 50%; }
+      .demo-video-chrome .traffic span:nth-child(1) { background: #FF5F57; }
+      .demo-video-chrome .traffic span:nth-child(2) { background: #FEBC2E; }
+      .demo-video-chrome .traffic span:nth-child(3) { background: #28C840; }
+      .demo-video-chrome .live { margin-left: auto; color: var(--accent); display: flex; align-items: center; gap: 6px; }
+      .demo-video-chrome .live .pulse {
+        width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+        box-shadow: 0 0 10px rgba(245,165,36,0.8);
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
       .demo-video-wrap video { display: block; width: 100%; height: auto; }
+      .demo-caption {
+        text-align: center; color: var(--muted); font-family: 'Geist Mono', monospace;
+        font-size: 13px; margin-top: 18px; letter-spacing: 0.3px;
+      }
     </style>
-    <div class="demo-video-wrap">
-      <video src="/npad-demo.mp4" controls autoplay muted loop playsinline preload="metadata"></video>
+    <div class="demo-video-section">
+      <div class="eyebrow">▶ 60-second demo</div>
+      <div class="demo-video-stage">
+        <div class="demo-video-wrap">
+          <div class="demo-video-chrome">
+            <div class="traffic"><span></span><span></span><span></span></div>
+            <span>npad.run</span>
+            <span class="live"><span class="pulse"></span> LIVE</span>
+          </div>
+          <video src="/npad-demo.mp4" controls autoplay muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+      <div class="demo-caption">Watch one agent hand off a runbook to the next — same link, no re-explaining.</div>
     </div>
 
     <div class="divider"></div>

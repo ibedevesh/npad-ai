@@ -32,3 +32,8 @@ firebase-service-account.json
 secrets/
 
 .env*.local
+
+# local-only working dirs (do not commit)
+demo-video/
+email/
+npad-claude-free.md
