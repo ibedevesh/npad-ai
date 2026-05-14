@@ -1,6 +1,6 @@
 {
   "name": "@npad/mcp",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "description": "MCP server for npad — exposes note_write/read/search tools to any MCP-compatible AI agent.",
   "license": "MIT",
   "homepage": "https://npad.run",
@@ -9,7 +9,14 @@
     "url": "git+https://github.com/ibedevesh/npad-ai.git",
     "directory": "packages/mcp"
   },
-  "keywords": ["mcp", "npad", "ai", "agents", "claude", "notes"],
+  "keywords": [
+    "mcp",
+    "npad",
+    "ai",
+    "agents",
+    "claude",
+    "notes"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -34,7 +41,9 @@
       "import": "./dist/config.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "prepublishOnly": "pnpm build",

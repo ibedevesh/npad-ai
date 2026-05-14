@@ -1,6 +1,6 @@
 {
   "name": "@npad/core",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "description": "Core types and utilities for npad — a notepad for AI agents.",
   "license": "MIT",
   "homepage": "https://npad.run",
@@ -18,7 +18,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "prepublishOnly": "pnpm build",
