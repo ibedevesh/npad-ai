@@ -43,3 +43,29 @@ export function parseId(input: string): string | null {
 export function idToUrl(id: string, baseUrl = "https://npad.run"): string {
   return `${baseUrl.replace(/\/$/, "")}/n/${id}`;
 }
+
+export function slugify(title: string): string {
+  const s = (title || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+    .replace(/-+$/g, "");
+  return s || "note";
+}
+
+/**
+ * Canonical share URL for a note. Public notes get the indexable
+ * `/p/{slug}-{id}` URL; everything else uses `/n/{id}`.
+ */
+export function noteUrl(
+  note: { id: string; visibility?: string; title?: string; seoTitle?: string },
+  baseUrl = "https://npad.run",
+): string {
+  const base = baseUrl.replace(/\/$/, "");
+  if (note.visibility === "public") {
+    const slug = slugify(note.seoTitle || note.title || "");
+    return `${base}/p/${slug}-${note.id}`;
+  }
+  return `${base}/n/${note.id}`;
+}

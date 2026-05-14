@@ -7,7 +7,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { idToUrl, type Store } from "@npad/core";
+import { noteUrl, type Store } from "@npad/core";
 import { SqliteStore } from "./stores/sqlite.js";
 import { HttpStore } from "./stores/http.js";
 import { resolveAuth } from "./config.js";
@@ -183,7 +183,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
         });
         return ok({
           id: note.id,
-          url: idToUrl(note.id, baseUrl),
+          url: noteUrl(note, baseUrl),
           title: note.title,
           visibility: note.visibility,
         });
@@ -212,7 +212,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       case "note_fork": {
         const note = await store.fork(String(a.id ?? ""));
         if (!note) return err(`Note not found: ${a.id}`);
-        return ok({ id: note.id, url: idToUrl(note.id, baseUrl), title: note.title });
+        return ok({ id: note.id, url: noteUrl(note, baseUrl), title: note.title });
       }
       case "note_update": {
         const note = await store.update({
@@ -227,7 +227,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
           seoTitle: typeof a.seoTitle === "string" ? a.seoTitle : undefined,
         });
         if (!note) return err(`Note not found: ${a.id}`);
-        return ok({ id: note.id, url: idToUrl(note.id, baseUrl), title: note.title, visibility: note.visibility, updatedAt: note.updatedAt });
+        return ok({ id: note.id, url: noteUrl(note, baseUrl), title: note.title, visibility: note.visibility, updatedAt: note.updatedAt });
       }
       case "note_delete": {
         const ok_ = await store.delete(String(a.id ?? ""));
