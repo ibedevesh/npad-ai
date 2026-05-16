@@ -151,6 +151,29 @@ main.wide { max-width: 880px; }
 .share-bar .label { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; }
 .share-bar .url { font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--fg); user-select: all; }
 .share-bar .actions { display: flex; gap: 8px; }
+.related-notes { margin-top: 48px; }
+.related-notes-head {
+  font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1.4px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.related-notes-head::before, .related-notes-head::after {
+  content: ""; flex: 1; height: 1px; background: var(--border);
+}
+.related-list { display: flex; flex-direction: column; gap: 10px; }
+.related-card {
+  display: block; padding: 14px 16px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--card); text-decoration: none;
+  color: inherit; transition: border-color 0.12s, transform 0.12s;
+}
+.related-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.related-card-title { font-size: 15px; font-weight: 600; color: var(--fg); margin: 0 0 4px; letter-spacing: -0.3px; }
+.related-card-snippet { font-size: 13px; color: var(--muted); margin: 0 0 8px; line-height: 1.5; }
+.related-card-meta {
+  font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--dim);
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.related-card-meta .dot-sep { color: var(--border-strong); }
 .toggle-row { display: flex; gap: 6px; margin: 18px 0 14px; }
 .toggle-row button {
   background: transparent; border: 1px solid var(--border-strong); color: var(--muted);
@@ -1171,6 +1194,16 @@ export function notePreview(note: {
   canonical?: string;
   indexable?: boolean;
   seoTitle?: string;
+  relatedNotes?: Array<{
+    id: string;
+    title: string;
+    seoTitle?: string;
+    snippet: string;
+    updatedAt: number;
+    views: number;
+    agents: number;
+    url: string;
+  }>;
 }): string {
   const visBadge =
     note.visibility === "domain" ? "company" :
@@ -1244,6 +1277,32 @@ export function notePreview(note: {
     <p class="muted" style="font-size: 12.5px; margin-top: 14px; text-align: center;">
       drop the URL into your AI agent — it pulls the note via npad's API and runs the whole thing in one shot.
     </p>
+    ` : ""}
+
+    ${(note.relatedNotes && note.relatedNotes.length > 0) ? `
+    <section class="related-notes">
+      <div class="related-notes-head">related notes</div>
+      <div class="related-list">
+        ${note.relatedNotes.map((r) => {
+          const ageDays = Math.floor((Date.now() - r.updatedAt) / (1000 * 60 * 60 * 24));
+          const age = ageDays === 0 ? "today" : ageDays === 1 ? "1 day ago" : `${ageDays} days ago`;
+          const title = escape(r.seoTitle || r.title);
+          return `
+            <a class="related-card" href="${escape(r.url)}">
+              <h3 class="related-card-title">${title}</h3>
+              ${r.snippet ? `<p class="related-card-snippet">${escape(r.snippet)}…</p>` : ""}
+              <div class="related-card-meta">
+                <span>${r.views.toLocaleString()} views</span>
+                <span class="dot-sep">·</span>
+                <span>${r.agents.toLocaleString()} agents</span>
+                <span class="dot-sep">·</span>
+                <span>${escape(age)}</span>
+              </div>
+            </a>
+          `;
+        }).join("")}
+      </div>
+    </section>
     ` : ""}
 
     <script>
