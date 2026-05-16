@@ -96,6 +96,16 @@ Full docs live on [npad.run](https://npad.run).
 
 PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Star History
+
+<a href="https://www.star-history.com/#ibedevesh/npad-ai&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ibedevesh/npad-ai&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ibedevesh/npad-ai&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ibedevesh/npad-ai&type=Date" />
+  </picture>
+</a>
+
 ## License
 
 [MIT](LICENSE)

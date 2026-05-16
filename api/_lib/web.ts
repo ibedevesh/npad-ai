@@ -1216,7 +1216,7 @@ export function notePreview(note: {
     ${hasBody ? `
     <div class="share-bar">
       <div>
-        <div class="label">feed this URL to your agent</div>
+        <div class="label">feed this URL to your AI agent and watch it one-shot the task</div>
         <div class="url" style="margin-top: 6px;">${escape(shareUrl)}</div>
       </div>
       <div class="actions">
@@ -1225,7 +1225,7 @@ export function notePreview(note: {
       </div>
     </div>
     <p class="muted" style="font-size: 12.5px; margin-top: 14px; text-align: center;">
-      paste the URL into Claude Code, Codex or Cursor — the agent fetches the full body via npad's API.
+      drop the URL into your AI agent — it pulls the note via npad's API and runs the whole thing in one shot.
     </p>
     ` : ""}
 
