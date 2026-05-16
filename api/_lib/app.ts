@@ -73,6 +73,65 @@ function rowToNote(r: Row): Note {
   };
 }
 
+type RelatedNote = {
+  id: string;
+  title: string;
+  seoTitle?: string;
+  snippet: string;
+  updatedAt: number;
+  views: number;
+  agents: number;
+  url: string;
+};
+
+// Suggested notes at the end of a public note. Tag overlap ranks first, then
+// views in the last 7 days, then recency. When the current note has no tags
+// (or no overlapping public peers), this naturally degrades to "most viewed
+// recently" — exactly the fallback we want while the catalog is small.
+async function fetchRelatedNotes(currentId: string, currentTags: string[]): Promise<RelatedNote[]> {
+  const s = sql();
+  const tagsJson = JSON.stringify(Array.isArray(currentTags) ? currentTags : []);
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const rows = (await s`
+    SELECT n.id, n.title, n.body, n.seo_title, n.updated_at,
+           (SELECT COUNT(*)::int FROM jsonb_array_elements_text(n.tags) AS t
+            WHERE t IN (SELECT jsonb_array_elements_text(${tagsJson}::jsonb))) AS tag_overlap,
+           COALESCE(h.views, 0)::int  AS views,
+           COALESCE(h.agents, 0)::int AS agents
+    FROM notes n
+    LEFT JOIN (
+      SELECT note_id,
+             COUNT(*) AS views,
+             COUNT(DISTINCT ua_category) AS agents
+      FROM note_hits
+      WHERE created_at > ${sevenDaysAgo}
+      GROUP BY note_id
+    ) h ON h.note_id = n.id
+    WHERE n.visibility = 'public' AND n.id != ${currentId}
+    ORDER BY tag_overlap DESC, views DESC, n.updated_at DESC
+    LIMIT 4
+  `) as Array<{
+    id: string;
+    title: string;
+    body: string;
+    seo_title: string | null;
+    updated_at: number;
+    tag_overlap: number;
+    views: number;
+    agents: number;
+  }>;
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    seoTitle: r.seo_title || undefined,
+    snippet: r.body.replace(/\s+/g, " ").trim().slice(0, 140),
+    updatedAt: Number(r.updated_at),
+    views: r.views,
+    agents: r.agents,
+    url: `https://npad.run/p/${slugify(r.seo_title || r.title)}-${r.id}`,
+  }));
+}
+
 function isVisibility(v: unknown): v is Visibility {
   return v === "private" || v === "unlisted" || v === "domain" || v === "public";
 }
@@ -141,13 +200,14 @@ app.get("/p/:slugAndId", async (c) => {
   const id = parseSlugId(c.req.param("slugAndId"));
   if (!id) return c.html(notFound(), 404);
   const s = sql();
-  const rows = (await s`SELECT id, title, body, visibility, seo_title, updated_at FROM notes WHERE id = ${id}`) as Array<{
+  const rows = (await s`SELECT id, title, body, visibility, seo_title, updated_at, tags FROM notes WHERE id = ${id}`) as Array<{
     id: string;
     title: string;
     body: string;
     visibility: Visibility;
     seo_title: string | null;
     updated_at: number;
+    tags: string[] | null;
   }>;
   const row = rows[0];
   if (!row || row.visibility !== "public") return c.html(notFound(), 404);
@@ -160,6 +220,7 @@ app.get("/p/:slugAndId", async (c) => {
   });
   const slugSource = row.seo_title || row.title;
   const canonical = `https://npad.run/p/${slugify(slugSource)}-${row.id}`;
+  const relatedNotes = await fetchRelatedNotes(row.id, Array.isArray(row.tags) ? row.tags : []);
   return c.html(
     notePreview({
       id: row.id,
@@ -170,6 +231,7 @@ app.get("/p/:slugAndId", async (c) => {
       updatedAt: Number(row.updated_at),
       canonical,
       indexable: true,
+      relatedNotes,
     }),
   );
 });
