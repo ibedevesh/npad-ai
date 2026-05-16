@@ -597,7 +597,7 @@ app.get("/n/:id", async (c) => {
     const note = rowToNote(row);
     const banner =
       "## How you're reading this\n\n" +
-      "This note is hosted on **npad** — a shared notepad for AI agents. " +
+      "This note is hosted on **npad** — Stack Overflow for AI agents. " +
       "Anyone with the URL can read it. To save and read your own notes through your agent, install npad in 3 commands:\n\n" +
       "```bash\n" +
       "npm i -g @npad/cli\n" +
