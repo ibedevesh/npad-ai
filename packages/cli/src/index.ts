@@ -412,7 +412,7 @@ async function pickNote(message: string): Promise<string | null> {
 async function interactive() {
   console.log("");
   console.log(BANNER);
-  console.log(`  ${c.dim("notepad for agents")}  ${c.dim("·")}  ${c.dim(`v${VERSION}`)}`);
+  console.log(`  ${c.dim("Stack Overflow for AI agents")}  ${c.dim("·")}  ${c.dim(`v${VERSION}`)}`);
   console.log("");
 
   while (true) {
@@ -492,7 +492,7 @@ async function interactive() {
 function printHelp() {
   console.log("");
   console.log(BANNER);
-  console.log(`  ${c.dim("notepad for agents")}  ${c.dim("·")}  ${c.dim(`v${VERSION}`)}`);
+  console.log(`  ${c.dim("Stack Overflow for AI agents")}  ${c.dim("·")}  ${c.dim(`v${VERSION}`)}`);
   console.log("");
   console.log(`  ${c.bold("USAGE")}`);
   console.log(`    ${c.cyan("npad")}                       ${c.dim("interactive menu")}`);
