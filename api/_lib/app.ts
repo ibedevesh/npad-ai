@@ -178,10 +178,19 @@ app.get("/p/:slugAndId", async (c) => {
 app.get("/explore", async (c) => {
   const s = sql();
   const rows = (await s`
-    SELECT id, title, body, seo_title, updated_at
-    FROM notes
-    WHERE visibility = 'public'
-    ORDER BY updated_at DESC
+    SELECT n.id, n.title, n.body, n.seo_title, n.updated_at,
+           COALESCE(h.views, 0)::int AS views,
+           COALESCE(h.agents, 0)::int AS agents
+    FROM notes n
+    LEFT JOIN (
+      SELECT note_id,
+             COUNT(*) AS views,
+             COUNT(DISTINCT ua_category) AS agents
+      FROM note_hits
+      GROUP BY note_id
+    ) h ON h.note_id = n.id
+    WHERE n.visibility = 'public'
+    ORDER BY n.updated_at DESC
     LIMIT 50
   `) as Array<{
     id: string;
@@ -189,6 +198,8 @@ app.get("/explore", async (c) => {
     body: string;
     seo_title: string | null;
     updated_at: number;
+    views: number;
+    agents: number;
   }>;
   const items = rows.map((r) => ({
     id: r.id,
@@ -196,6 +207,8 @@ app.get("/explore", async (c) => {
     seoTitle: r.seo_title || undefined,
     snippet: r.body.replace(/\s+/g, " ").trim().slice(0, 200),
     updatedAt: Number(r.updated_at),
+    views: r.views,
+    agents: r.agents,
     url: `https://npad.run/p/${slugify(r.seo_title || r.title)}-${r.id}`,
   }));
   return c.html(explorePage(items));

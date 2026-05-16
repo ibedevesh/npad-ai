@@ -103,17 +103,22 @@ header.menu-open .burger span::after { top: 0; transform: rotate(-45deg); }
   header { position: sticky; }
 }
 .explore-list { list-style: none; padding: 0; margin: 0; }
-.explore-row { display: grid; grid-template-columns: 28px 1fr; gap: 8px 12px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+.explore-row { display: grid; grid-template-columns: 88px 1fr; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); align-items: start; }
 .explore-row:last-child { border-bottom: 0; }
-.explore-rank { font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--dim); text-align: right; padding-top: 2px; }
-.explore-row a.title { color: var(--fg); text-decoration: none; font-size: 16px; line-height: 1.35; letter-spacing: -0.2px; font-weight: 500; }
-.explore-row a.title:hover { color: var(--accent); }
-.explore-row .sub { grid-column: 2; font-family: 'Geist Mono', monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0.3px; margin-top: 2px; }
-.explore-row .sub a { color: var(--muted); text-decoration: none; }
-.explore-row .sub a:hover { color: var(--fg); text-decoration: underline; }
+.explore-stats { display: flex; flex-direction: column; gap: 4px; font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); text-align: right; padding-top: 2px; }
+.explore-stats .stat { display: flex; justify-content: flex-end; align-items: baseline; gap: 6px; letter-spacing: 0.2px; }
+.explore-stats .stat .n { font-size: 15px; color: var(--fg); font-weight: 500; }
+.explore-stats .stat .label { font-size: 11px; color: var(--muted); }
+.explore-stats .stat.hot .n { color: var(--accent); }
+.explore-main { min-width: 0; }
+.explore-row a.title { color: var(--accent); text-decoration: none; font-size: 16px; line-height: 1.35; letter-spacing: -0.2px; font-weight: 500; display: block; }
+.explore-row a.title:hover { text-decoration: underline; }
+.explore-row .snippet { color: #A1A1AA; font-size: 13.5px; line-height: 1.55; margin: 6px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.explore-row .sub { font-family: 'Geist Mono', monospace; font-size: 11.5px; color: var(--muted); letter-spacing: 0.3px; margin-top: 8px; }
 @media (max-width: 540px) {
-  .explore-row { grid-template-columns: 22px 1fr; gap: 6px 10px; }
+  .explore-row { grid-template-columns: 68px 1fr; gap: 12px; padding: 14px 0; }
   .explore-row a.title { font-size: 15px; }
+  .explore-stats .stat .n { font-size: 14px; }
 }
 main { flex: 1; max-width: 760px; margin: 0 auto; padding: 64px 24px 48px; width: 100%; }
 main.wide { max-width: 880px; }
@@ -1263,21 +1268,31 @@ export function explorePage(items: Array<{
   seoTitle?: string;
   snippet: string;
   updatedAt: number;
+  views: number;
+  agents: number;
   url: string;
 }>): string {
   const fmtAge = (ts: number) => {
     const d = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
     return d === 0 ? "today" : d === 1 ? "1 day ago" : `${d} days ago`;
   };
+  const fmtNum = (n: number) =>
+    n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n);
   const list = items.length === 0
     ? `<div class="card"><p style="margin:0;">Nothing public yet. Be the first — make a note <code>public</code> via your agent.</p></div>`
-    : `<ol class="explore-list">${items.map((it, i) => `
+    : `<ul class="explore-list">${items.map((it) => `
         <li class="explore-row">
-          <span class="explore-rank">${i + 1}.</span>
-          <a class="title" href="${escape(it.url)}">${escape(it.seoTitle || it.title)}</a>
-          <span class="sub">${escape(fmtAge(it.updatedAt))} · <a href="${escape(it.url)}">read</a></span>
+          <div class="explore-stats">
+            <div class="stat${it.views >= 50 ? " hot" : ""}"><span class="n">${fmtNum(it.views)}</span><span class="label">views</span></div>
+            <div class="stat"><span class="n">${fmtNum(it.agents)}</span><span class="label">agents</span></div>
+          </div>
+          <div class="explore-main">
+            <a class="title" href="${escape(it.url)}">${escape(it.seoTitle || it.title)}</a>
+            <p class="snippet">${escape(it.snippet)}</p>
+            <div class="sub">${escape(fmtAge(it.updatedAt))}</div>
+          </div>
         </li>
-      `).join("")}</ol>`;
+      `).join("")}</ul>`;
 
   const body = `
     <h1 class="note-title" style="font-size: 32px; margin-bottom: 6px;">Explore</h1>
